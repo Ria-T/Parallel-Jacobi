@@ -45,11 +45,12 @@
  * NOTE: u(0,*), u(maxXCount-1,*), u(*,0) and u(*,maxYCount-1)
  * are BOUNDARIES and therefore not part of the solution.
  *************************************************************/
- double one_jacobi_iteration(double xStart, double yStart,
+inline double one_jacobi_iteration(double xStart, double yStart,
                             int maxXCount, int maxYCount,
                             double *src, double *dst,
                             double deltaX, double deltaY,
-                            double alpha, double omega)
+                            double alpha, double omega,
+                            double const * const cx, double const * const cy, double const * const cc)
 {
 #define SRC(XX,YY) src[(YY)*maxXCount+(XX)]
 #define DST(XX,YY) dst[(YY)*maxXCount+(XX)]
@@ -59,9 +60,9 @@
     double updateVal;
     double f;
     // Coefficients
-    double cx = 1.0/(deltaX*deltaX);
+    /*double cx = 1.0/(deltaX*deltaX);
     double cy = 1.0/(deltaY*deltaY);
-    double cc = -2.0*cx-2.0*cy-alpha;
+    double cc = -2.0*cx-2.0*cy-alpha;*/
 
     for (y = 1; y < (maxYCount-1); y++)
     {
@@ -70,16 +71,17 @@
         {
             fX = xStart + (x-1)*deltaX;
             f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
-            updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*cx +
-                			(SRC(x,y-1) + SRC(x,y+1))*cy +
-                			SRC(x,y)*cc - f
-						)/cc;
+            updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
+                			(SRC(x,y-1) + SRC(x,y+1))*(*cy) +
+                			SRC(x,y)*(*cc) - f
+						)/(*cc);
             DST(x,y) = SRC(x,y) - omega*updateVal;
             error += updateVal*updateVal;
         }
     }
     return sqrt(error)/((maxXCount-2)*(maxYCount-2));
 }
+
 
 
 /**********************************************************
@@ -161,19 +163,28 @@ int main(int argc, char **argv)
     error = HUGE_VAL;
     clock_t start = clock(), diff;
     
+
+    // Jacobi iteration Coefficient variables (values are calculated once -> faster execution of inline function)
+    double JIV_cx = 1.0/(deltaX*deltaX);
+    double JIV_cy = 1.0/(deltaY*deltaY);
+    double JIV_cc = -2.0*JIV_cx-2.0*JIV_cy-alpha;
+
     MPI_Init(NULL,NULL);
     t1 = MPI_Wtime();
 
     /* Iterate as long as it takes to meet the convergence criterion */
     while (iterationCount < maxIterationCount && error > maxAcceptableError)
     {    	
-//        printf("Iteration %i", iterationCount);
+        //printf("Iteration %i", iterationCount);
+
         error = one_jacobi_iteration(xLeft, yBottom,
                                      n+2, m+2,
                                      u_old, u,
                                      deltaX, deltaY,
-                                     alpha, relax);
-//        printf("\tError %g\n", error);
+                                     alpha, relax,
+                                     &JIV_cx, &JIV_cy, &JIV_cc);
+
+        //printf("\tError %g\n", error);
         iterationCount++;
         // Swap the buffers
         tmp = u_old;

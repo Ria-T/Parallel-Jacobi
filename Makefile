@@ -1,2 +1,9 @@
+CC = mpicc
+cflags = -O3 -Wall
+libraries = -lm
+
+
 all:
-	mpicc -O3 -lm jacobi_serial.c -o jacobi_serial.x
+	$(CC) $(cflags) jacobi_serial.c -o jacobi_serial.x $(libraries)
+clean:
+	rm jacobi_serial.x
