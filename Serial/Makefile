@@ -2,8 +2,11 @@ CC = mpicc
 cflags = -O3 -Wall
 libraries = -lm
 
+sourceFiles = jacobi_serial.c
+executable = jacobi_serial.x
 
 all:
-	$(CC) $(cflags) jacobi_serial.c -o jacobi_serial.x $(libraries)
+	$(CC) $(cflags) $(sourceFiles) -o $(executable) $(libraries)
+
 clean:
-	rm jacobi_serial.x
+	rm $(executable)

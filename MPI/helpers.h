@@ -1,0 +1,1 @@
+void drawtable(int bold[2][2], int size[2], int rank);
