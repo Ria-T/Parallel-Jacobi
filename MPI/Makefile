@@ -2,13 +2,16 @@ CC = mpicc
 cflags = -O3 -Wall
 libraries = -lm
 
-objects = jacobi_mpi.o helpers.o
+objects = jacobi_mpi.o helpers.o partitioning.o
 executable = jacobi_mpi.x
 
 all: $(objects)
 	$(CC) $(cflags) $(objects) -o $(executable) $(libraries)
 
-helpers.o: helpers.c
+partitioning.o: partitioning.c partitioning.h
+	$(CC) $(cflags) -c partitioning.c -o partitioning.o
+
+helpers.o: helpers.c helpers.h
 	$(CC) $(cflags) -c helpers.c -o helpers.o
 
 jacobi_mpi.o: jacobi_mpi.c
@@ -18,4 +21,4 @@ clean:
 	rm $(objects) $(executable)
 
 wash:
-	rm JseqJacobi.o* JseqJacobi.e*
+	rm Jacobi.o* Jacobi.e*

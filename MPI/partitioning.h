@@ -1,0 +1,1 @@
+void get_local_table(int size[2], int coords[2], int *rank, int world_size);
