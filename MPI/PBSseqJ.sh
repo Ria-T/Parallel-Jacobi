@@ -16,4 +16,4 @@
 cd $PBS_O_WORKDIR
 
 # Run executable #
-mpirun jacobi_mpi.x < input
+mpirun jacobi_mpi.x < input2

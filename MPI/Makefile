@@ -22,3 +22,4 @@ clean:
 
 wash:
 	rm Jacobi.o* Jacobi.e*
+	rm tabl*

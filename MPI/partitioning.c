@@ -26,6 +26,7 @@ void calculate_topology(int size[2], int processes, int dims[2]){
 #define RIGHT 3
 #define DOWN 1
 
+
 int *get_neighbors(MPI_Comm *cart_comm){
     int *neighbors = malloc(sizeof(int)*4);
     MPI_Cart_shift(*cart_comm, 0, 1, neighbors + UP, neighbors + DOWN);
@@ -47,17 +48,33 @@ void get_local_table(int size[2], int coords[2], int *rank, int world_size){
 
     int *neighbors = get_neighbors(&cart_comm);
 
-    //MPI_Cart_create(comm,ndim,dimensions,periodic,1,&comm2d);
     int cart_rank;
     MPI_Comm_rank(cart_comm, &cart_rank);
     MPI_Cart_coords(cart_comm,cart_rank,2,coords);
 
-    printf("I am %d: (%d,%d); originally %d\n   %2d\n%2d %2d %2d\n   %2d\n_\n"
+    int coordinates[2][2];
+
+    coordinates[0][0] = (size[0]/dims[0]) * coords[0] - 1;
+    if(coordinates[0][0]!=0) coordinates[0][0]++;
+    coordinates[0][1] = (size[1]/dims[1]) * coords[1] - 1;
+    if(coordinates[0][1]!=0) coordinates[0][1]++;
+
+
+    coordinates[1][0] = (size[0]/dims[0]) * (coords[0]+1) - 1;
+    coordinates[1][1] = (size[1]/dims[1]) * (coords[1]+1) - 1;
+    //if(dims[1] == coords[1]+1) {printf("happend for %d %d\n",dims[0],cart_rank); coordinates[1][1] = size[1]}
+    //if(dims[0] == coords[0]+1 && coordinates[1][1]!=size[0]) {printf("STUPID A (%d)\n",cart_rank);}
+    if(dims[1] == coords[1]+1 && coordinates[1][1]!=size[1]-1) {printf("STUPID B (%d)\n",cart_rank);}
+
+    /*printf("I am %d: (%d,%d); originally %d\nWill have table [%d,%d] [%d,%d]\n   %2d\n%2d %2d %2d\n   %2d\n_\n"
     ,cart_rank, coords[0], coords[1], *rank
-    ,neighbors[UP], neighbors[LEFT], cart_rank, neighbors[RIGHT], neighbors[DOWN]);
+    ,coordinates[0][0],coordinates[0][1],coordinates[1][0],coordinates[1][1]
+    ,neighbors[UP], neighbors[LEFT], cart_rank, neighbors[RIGHT], neighbors[DOWN]);*/
+
+    printf("(%d,%d) %2d -> [%3d,%3d]-[%3d,%3d]\n",coords[0],coords[1],cart_rank
+    ,coordinates[0][0],coordinates[0][1],coordinates[1][0],coordinates[1][1]);
 
     free(neighbors);
 
-    int coordinates[0][0];
-
+    draw_table(coordinates, size, cart_rank);
 }

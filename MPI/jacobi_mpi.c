@@ -152,44 +152,12 @@ int main(int argc, char **argv)
     MPI_Bcast(&tol, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&mits, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    int sizee[2], coords[2];
-    sizee[0] = n;
-    sizee[1] = m;
-    get_local_table(sizee, coords, &rank, world_size);
-    return 0;
-
-    printf("%d out of %d\n-> %d, %d, %g, %g, %g, %d\n gonna take %d out of %d, and %d out of %d\n"
-    ,rank, world_size, n, m, alpha, relax, tol, mits, n/world_size, n, m/world_size, m);
-
-    // Now each proccess will get it's "working" area of the table
-    MPI_Barrier(MPI_COMM_WORLD);
-    int startRow,endRow;
-    if(rank == 0){
-        startRow = 0;
-        endRow = round(m/world_size);//m/world_size-1;
-        MPI_Send(&endRow, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD);
-    }else if(rank != world_size-1){
-        MPI_Recv(&startRow, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        startRow++; // Starting where the previous ended
-        endRow = startRow + round(m/world_size);//m/world_size-1;
-        MPI_Send(&endRow, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD);
-    }else{
-        MPI_Recv(&startRow, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        startRow++;
-        endRow = m;
-    }
-
-    int bold[2][2], size[2];
+    int size[2], coords[2];
     size[0] = n;
     size[1] = m;
-    bold[0][0] = 0; bold[0][1] = startRow;
-    bold[1][0] = n-1; bold[1][1] = endRow;
-    draw_table(bold, size , rank);
-
-    int original_n = n, original_m = m;
-    n = n;
-    m = endRow - startRow;
-    printf("(%d) small range: %d,%d\n",rank,n,m);
+    get_local_table(size, coords, &rank, world_size);
+    n = size[0];
+    m = size[1];
 
     allocCount = (n+2)*(m+2);
     // Those two calls also zero the boundary elements
