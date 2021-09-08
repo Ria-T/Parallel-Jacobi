@@ -39,6 +39,7 @@
 #include <mpi.h>
 
 #include "partitioning.h"
+#include "helpers.h"
 
 /*************************************************************
  * Performs one iteration of the Jacobi method and computes
@@ -47,12 +48,13 @@
  * NOTE: u(0,*), u(maxXCount-1,*), u(*,0) and u(*,maxYCount-1)
  * are BOUNDARIES and therefore not part of the solution.
  *************************************************************/
-inline double one_jacobi_iteration(double xStart, double yStart,
+/*inline*/ double one_jacobi_iteration(double xStart, double yStart,
                             int maxXCount, int maxYCount,
                             double *src, double *dst,
                             double deltaX, double deltaY,
                             double alpha, double omega,
-                            double const * const cx, double const * const cy, double const * const cc)
+                            double const * const cx, double const * const cy, double const * const cc,
+                            int *neighbors)
 {
 #define SRC(XX,YY) src[(YY)*maxXCount+(XX)]
 #define DST(XX,YY) dst[(YY)*maxXCount+(XX)]
@@ -152,12 +154,16 @@ int main(int argc, char **argv)
     MPI_Bcast(&tol, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&mits, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    int size[2], coords[2];
+
+    MPI_Comm cart_comm;
+    int size[2], *neighbors, **coordinates;
+    get_local_table(&n, &m, &coordinates, &rank, world_size,&cart_comm);
+    n = coordinates[1][0]-coordinates[0][0];
+    m = coordinates[1][1]-coordinates[0][1];
     size[0] = n;
     size[1] = m;
-    get_local_table(size, coords, &rank, world_size);
-    n = size[0];
-    m = size[1];
+    printf("%d:%dx%d\n",rank,n,m);
+    neighbors = get_neighbors(&cart_comm);
 
     allocCount = (n+2)*(m+2);
     // Those two calls also zero the boundary elements
@@ -191,20 +197,97 @@ int main(int argc, char **argv)
     double JIV_cy = 1.0/(deltaY*deltaY);
     double JIV_cc = -2.0*JIV_cx-2.0*JIV_cy-alpha;
 
+    MPI_Request SRequests[4],RRequests[4];
+    int requestsCount = 0;
+    MPI_Datatype table_row, table_column;
+    MPI_Type_vector(n, 1, 1, MPI_DOUBLE, &table_row);
+    MPI_Type_commit(&table_row);
+    MPI_Type_vector(m, 1, n+2, MPI_DOUBLE, &table_column);
+    MPI_Type_commit(&table_column);
+
     //MPI_Init(NULL,NULL); should it get up?
     t1 = MPI_Wtime();
 
+    //init_debug();
+
     /* Iterate as long as it takes to meet the convergence criterion */
     while (iterationCount < maxIterationCount && error > maxAcceptableError)
-    {    	
-        //printf("Iteration %i", iterationCount);
+    {
+        //printf("Iteration %i\n", iterationCount);
 
-        error = one_jacobi_iteration(xLeft, yBottom,
+        if(rank > -1){
+            int l;
+	
+			// second row
+            for(l=0; l<n+2; l++){
+                u_old[1*(n+2)+l]=0.11+rank;
+            }
+			
+			// pre last row
+            for(l=0; l<n+2; l++){
+                u_old[(m)*(n+2)+l]=0.44+rank;
+            }
+			
+			// left column + 1
+			for(l=0; l<m+2; l++){
+                u_old[l*(n+2)+1]=0.22+rank;
+            }
+			
+			// right column - 1
+			for(l=0; l<m+2; l++){
+                u_old[(l)*(n+2)+n]=0.33+rank;
+            }
+
+        }
+        requestsCount = 0;
+
+        write_table(u_old,size,rank,neighbors);
+
+        if(neighbors[UP] >= 0){
+            MPI_Irecv(u_old, 1, table_row, neighbors[UP], 0, cart_comm, &RRequests[requestsCount]);
+            MPI_Isend(&u_old[n+2], 1, table_row, neighbors[UP], 0, cart_comm, &SRequests[requestsCount]);
+            printf("%d got/sent line from/to %d\n",rank,neighbors[UP]);
+            requestsCount++;
+        }
+
+        if(neighbors[DOWN] >= 0){
+            MPI_Irecv(&u_old[(m+1)*(n+2)], 1, table_row, neighbors[DOWN], 0, cart_comm, &RRequests[requestsCount]);
+            MPI_Isend(&u_old[n+2], 1, table_row, neighbors[DOWN], 0, cart_comm, &SRequests[requestsCount]);
+            requestsCount++;
+            printf("%d got/sent line from/to %d\n",rank,neighbors[DOWN]);
+        }
+
+        if(neighbors[LEFT] >= 0){
+            MPI_Irecv(u_old, 1, table_column, neighbors[LEFT], 0, cart_comm,&RRequests[requestsCount]);
+            MPI_Isend(&u_old[n+2+1], 1, table_column, neighbors[LEFT], 0, cart_comm,&SRequests[requestsCount]);
+            requestsCount++;
+            //printf("%d got/sent line from/to %d\n",rank,neighbors[LEFT]);
+        }
+
+        if(neighbors[RIGHT] >= 0){
+            MPI_Irecv(&u_old[n+1], 1, table_column, neighbors[RIGHT], 0, cart_comm,&RRequests[requestsCount]);
+            MPI_Isend(&u_old[n], 1, table_column, neighbors[RIGHT], 0, cart_comm,&SRequests[requestsCount]);
+            requestsCount++;
+            //printf("%d got/sent line from/to %d\n",rank,neighbors[RIGHT]);
+        }
+
+//        MPI_Wait(RRequests, MPI_STATUS_IGNORE); 
+        MPI_Waitall(requestsCount, RRequests, MPI_STATUS_IGNORE);
+        /*if(neighbors[UP] >= 0 ){
+            MPI_Wait(RRequests + UP, MPI_STATUS_IGNORE); 
+        }
+        if(neighbors[DOWN] >= 0 ){
+            MPI_Wait(RRequests + DOWN, MPI_STATUS_IGNORE);
+        }*/
+
+        //printf("1\n");
+
+        /*error = one_jacobi_iteration(xLeft, yBottom,
                                      n+2, m+2,
                                      u_old, u,
                                      deltaX, deltaY,
                                      alpha, relax,
-                                     &JIV_cx, &JIV_cy, &JIV_cc);
+                                     &JIV_cx, &JIV_cy, &JIV_cc, neighbors);*/
 
         //printf("\tError %g\n", error);
         iterationCount++;
@@ -212,6 +295,23 @@ int main(int argc, char **argv)
         tmp = u_old;
         u_old = u;
         u = tmp;
+
+        //printf("2\n");
+//        MPI_Wait(SRequests, MPI_STATUS_IGNORE); 
+        //printf("rank %d wait for %d\n",rank,requestsCount);
+        MPI_Waitall(requestsCount, SRequests, MPI_STATUS_IGNORE);
+        /*if(neighbors[UP] >= 0 ){
+           MPI_Wait(SRequests + UP, MPI_STATUS_IGNORE); 
+        }*/
+        
+        //printf("3\n");
+        /*if(neighbors[DOWN] >= 0 ){
+            MPI_Wait(SRequests + DOWN, MPI_STATUS_IGNORE);
+        }*/
+        
+       //printf("4\n");
+       write_table(u,size,rank,neighbors);
+       break;
     }
 
     t2 = MPI_Wtime();
@@ -232,5 +332,7 @@ int main(int argc, char **argv)
                                          alpha);
     printf("The error of the iterative solution is %g\n", absoluteError);
 
+    free(neighbors);
+    free(coordinates);
     return 0;
 }

@@ -1,1 +1,9 @@
-void get_local_table(int size[2], int coords[2], int *rank, int world_size);
+//For neighbors table
+
+#define UP 0
+#define LEFT 2
+#define RIGHT 3
+#define DOWN 1
+
+void get_local_table(int *n, int *m, int ***coordinates, int *rank, int world_size, MPI_Comm *cart_comm);
+int *get_neighbors(MPI_Comm *cart_comm);

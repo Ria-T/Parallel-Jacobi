@@ -1,5 +1,5 @@
 CC = mpicc
-cflags = -O3 -Wall
+cflags = -O3 -g -Wall
 libraries = -lm
 
 objects = jacobi_mpi.o helpers.o partitioning.o
@@ -17,9 +17,14 @@ helpers.o: helpers.c helpers.h
 jacobi_mpi.o: jacobi_mpi.c
 	$(CC) $(cflags) -c jacobi_mpi.c -o jacobi_mpi.o
 
+sub: all wash
+	qsub PBSseqJ.sh
+
+run: all
+	mpiexec -n 1 gdb $(executable) : -n 3 $(executable)
+
 clean:
 	rm $(objects) $(executable)
 
 wash:
-	rm Jacobi.o* Jacobi.e*
-	rm tabl*
+	rm Jacobi.o* Jacobi.e* tabl* valtabl*

@@ -18,6 +18,23 @@ int printr(int rank, const char* fmt, ...){
     return ret;
 }
 
+void write_table(double *table, int size[2], int rank, int *neighbors){
+    char filename[50];
+    sprintf(filename,"valtabl%d",rank);
+    FILE * file = fopen (filename, "a+");
+    fprintf(file,"(%d) table = %dx%d",rank,size[0],size[1]);
+    fprintf(file," | up=%d down=%d left=%d right=%d\n",neighbors[0],neighbors[1],neighbors[2],neighbors[3]);
+    if(file<0) perror("open failed!\n");
+    for(int j=0; j<size[1]+2; j++){
+        for(int i=0; i<size[0]+2; i++){
+            fprintf(file,"%.2f ",table[j*(size[0]+2)+i]);
+        }
+        fprintf(file,"\n");
+    }
+    fprintf(file,"-------------------\n");
+    fclose(file);
+}
+
 void draw_table(int bold[2][2], int size[2], int rank){
     char filename[50];
     sprintf(filename,"tabl%d",rank);
@@ -42,4 +59,24 @@ void draw_table(int bold[2][2], int size[2], int rank){
         write(file,"\n",1);
     }
     close(file);
+}
+
+void init_debug(){
+    //return;
+
+    //int file = open("debug.txt", O_WRONLY | O_CREAT, S_IRWXU);
+    char hostname[256];
+    gethostname(hostname, sizeof(hostname));
+
+    /*write(file,hostname,strlen(hostname)*sizeof(char));
+    sprintf(hostname,"on PID %d\n\0", getpid());
+    write(file,hostname,strlen(hostname)*sizeof(char));*/
+
+    printf("PID %d on %s ready for attach\n", getpid(), hostname);
+
+
+    //close(file);
+
+    int l = 1;
+    while(l == 1) sleep(5);
 }
