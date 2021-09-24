@@ -4,20 +4,20 @@
 #include <mpi.h>
 #include "helpers.h"
 
-void calculate_topology(int processes, int dims[2]){
+void calculate_topology(int processes, int (*dims)[2]){
     double t;
     if( processes > 2 ){
         t = sqrt(processes);
         if ( t == (int)t ){
-            dims[0] = t;
-            dims[1] = t;
+            (*dims)[0] = t;
+            (*dims)[1] = t;
         }else{
-            dims[0] = 1;
-            dims[1] = processes;
+            (*dims)[0] = 1;
+            (*dims)[1] = processes;
         }
     }else{
-        dims[0] = processes;
-        dims[1] = dims[0];
+        (*dims)[0] = processes;
+        (*dims)[1] = (*dims)[0];
     }
 }
 
@@ -37,8 +37,8 @@ void get_local_table(int *n, int *m, int ***coordinates, int *rank, int world_si
     int dims[2], periods[2] = {0, 0}, size[2], coords[2], bold[2][2];
 
     if(*rank == 0){
-        calculate_topology(world_size, dims);
-        printf("There will be %d tables of %dx%d with a %dx%d topology\n",world_size,size[0]/dims[0],size[1]/dims[1],dims[0],dims[1]);
+        calculate_topology(world_size, &dims);
+        printf("There will be %d tables of %dx%d with a %dx%d topology\n",world_size,*n/dims[0],*m/dims[1],dims[0],dims[1]);
     }
     MPI_Bcast(dims, 2, MPI_INT, 0, MPI_COMM_WORLD);
 

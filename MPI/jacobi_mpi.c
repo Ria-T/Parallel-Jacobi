@@ -158,8 +158,8 @@ int main(int argc, char **argv)
     MPI_Comm cart_comm;
     int size[2], *neighbors, **coordinates;
     get_local_table(&n, &m, &coordinates, &rank, world_size,&cart_comm);
-    n = coordinates[1][0]-coordinates[0][0];
-    m = coordinates[1][1]-coordinates[0][1];
+    n = coordinates[1][0]-coordinates[0][0]+1;
+    m = coordinates[1][1]-coordinates[0][1]+1;
     size[0] = n;
     size[1] = m;
     printf("%d:%dx%d\n",rank,n,m);
@@ -219,23 +219,23 @@ int main(int argc, char **argv)
             int l;
 	
 			// second row
-            for(l=0; l<n+2; l++){
-                u_old[1*(n+2)+l]=0.11+rank;
+            for(l=1; l<n+1; l++){
+                u_old[1*(n+2)+l]=0.1+rank+((float)( (l-1)%10 )-1.0)/100.0;
             }
 			
 			// pre last row
-            for(l=0; l<n+2; l++){
-                u_old[(m)*(n+2)+l]=0.44+rank;
+            for(l=2; l<n+1; l++){
+                u_old[(m)*(n+2)+l]=0.2+rank+((float)( (l-2)%10 )-2.0)/100.0;
             }
 			
 			// left column + 1
-			for(l=0; l<m+2; l++){
-                u_old[l*(n+2)+1]=0.22+rank;
+			for(l=1; l<m+1; l++){
+                u_old[l*(n+2)+1]=0.3+rank+((float)( (l-1)%10 )-1.0)/100.0;
             }
 			
 			// right column - 1
-			for(l=0; l<m+2; l++){
-                u_old[(l)*(n+2)+n]=0.33+rank;
+			for(l=1; l<m+1; l++){
+                u_old[(l)*(n+2)+n]=0.4+rank+((float)( (l-1)%10 )-1.0)/100.0;
             }
 
         }
@@ -244,29 +244,29 @@ int main(int argc, char **argv)
         write_table(u_old,size,rank,neighbors);
 
         if(neighbors[UP] >= 0){
-            MPI_Irecv(u_old, 1, table_row, neighbors[UP], 0, cart_comm, &RRequests[requestsCount]);
-            MPI_Isend(&u_old[n+2], 1, table_row, neighbors[UP], 0, cart_comm, &SRequests[requestsCount]);
-            printf("%d got/sent line from/to %d\n",rank,neighbors[UP]);
+            MPI_Irecv(&u_old[1], 1, table_row, neighbors[UP], 0, cart_comm, &RRequests[requestsCount]);
+            MPI_Isend(&u_old[(n+2)+1], 1, table_row, neighbors[UP], 0, cart_comm, &SRequests[requestsCount]);
+            //printf("%d got/sent line from/to %d\n",rank,neighbors[UP]);
             requestsCount++;
         }
 
         if(neighbors[DOWN] >= 0){
-            MPI_Irecv(&u_old[(m+1)*(n+2)], 1, table_row, neighbors[DOWN], 0, cart_comm, &RRequests[requestsCount]);
-            MPI_Isend(&u_old[n+2], 1, table_row, neighbors[DOWN], 0, cart_comm, &SRequests[requestsCount]);
+            MPI_Irecv(&u_old[(m+1)*(n+2)+1], 1, table_row, neighbors[DOWN], 0, cart_comm, &RRequests[requestsCount]);
+            MPI_Isend(&u_old[(m+1)*(n+1)], 1, table_row, neighbors[DOWN], 0, cart_comm, &SRequests[requestsCount]);
             requestsCount++;
-            printf("%d got/sent line from/to %d\n",rank,neighbors[DOWN]);
+            //printf("%d got/sent line from/to %d\n",rank,neighbors[DOWN]);
         }
 
         if(neighbors[LEFT] >= 0){
-            MPI_Irecv(u_old, 1, table_column, neighbors[LEFT], 0, cart_comm,&RRequests[requestsCount]);
-            MPI_Isend(&u_old[n+2+1], 1, table_column, neighbors[LEFT], 0, cart_comm,&SRequests[requestsCount]);
+            MPI_Irecv(&u_old[(n+2)], 1, table_column, neighbors[LEFT], 0, cart_comm,&RRequests[requestsCount]);
+            MPI_Isend(&u_old[(n+2)+1], 1, table_column, neighbors[LEFT], 0, cart_comm,&SRequests[requestsCount]);
             requestsCount++;
             //printf("%d got/sent line from/to %d\n",rank,neighbors[LEFT]);
         }
 
         if(neighbors[RIGHT] >= 0){
-            MPI_Irecv(&u_old[n+1], 1, table_column, neighbors[RIGHT], 0, cart_comm,&RRequests[requestsCount]);
-            MPI_Isend(&u_old[n], 1, table_column, neighbors[RIGHT], 0, cart_comm,&SRequests[requestsCount]);
+            MPI_Irecv(&u_old[2*n+3], 1, table_column, neighbors[RIGHT], 0, cart_comm,&RRequests[requestsCount]);
+            MPI_Isend(&u_old[(n+2)+n], 1, table_column, neighbors[RIGHT], 0, cart_comm,&SRequests[requestsCount]);
             requestsCount++;
             //printf("%d got/sent line from/to %d\n",rank,neighbors[RIGHT]);
         }
