@@ -48,13 +48,12 @@
  * NOTE: u(0,*), u(maxXCount-1,*), u(*,0) and u(*,maxYCount-1)
  * are BOUNDARIES and therefore not part of the solution.
  *************************************************************/
-/*inline*/ double one_jacobi_iteration(double xStart, double yStart,
+inline double one_jacobi_iteration(double xStart, double yStart,
                             int maxXCount, int maxYCount,
                             double *src, double *dst,
                             double deltaX, double deltaY,
                             double alpha, double omega,
-                            double const * const cx, double const * const cy, double const * const cc,
-                            int *neighbors)
+                            double const * const cx, double const * const cy, double const * const cc)
 {
 #define SRC(XX,YY) src[(YY)*maxXCount+(XX)]
 #define DST(XX,YY) dst[(YY)*maxXCount+(XX)]
@@ -68,10 +67,10 @@
     double cy = 1.0/(deltaY*deltaY);
     double cc = -2.0*cx-2.0*cy-alpha;*/
 
-    for (y = 1; y < (maxYCount-1); y++)
+    for (y = 2; y < (maxYCount-2); y++)
     {
         fY = yStart + (y-1)*deltaY;
-        for (x = 1; x < (maxXCount-1); x++)
+        for (x = 2; x < (maxXCount-2); x++)
         {
             fX = xStart + (x-1)*deltaX;
             f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
@@ -83,7 +82,57 @@
             error += updateVal*updateVal;
         }
     }
-    return sqrt(error)/((maxXCount-2)*(maxYCount-2));
+    return error;//sqrt(error)/((maxXCount-2)*(maxYCount-2));
+}
+
+/*inline*/ double one_halo_jacobi_iteration(double xStart, double yStart,
+                            int maxXCount, int maxYCount,
+                            double *src, double *dst,
+                            double deltaX, double deltaY,
+                            double alpha, double omega,
+                            double const * const cx, double const * const cy, double const * const cc)
+{
+#define SRC(XX,YY) src[(YY)*maxXCount+(XX)]
+#define DST(XX,YY) dst[(YY)*maxXCount+(XX)]
+    int x, y;
+    double fX, fY;
+    double error = 0.0;
+    double updateVal;
+    double f;
+    // Coefficients
+    /*double cx = 1.0/(deltaX*deltaX);
+    double cy = 1.0/(deltaY*deltaY);
+    double cc = -2.0*cx-2.0*cy-alpha;*/
+
+    for(y=1; y<maxYCount-1; y+=maxYCount-3){
+        fY = yStart + (y-1)*deltaY;
+        for(x=1; x<maxXCount-1; x++){
+            fX = xStart + (x-1)*deltaX;
+            f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
+            updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
+                			(SRC(x,y-1) + SRC(x,y+1))*(*cy) +
+                			SRC(x,y)*(*cc) - f
+						)/(*cc);
+            DST(x,y) = SRC(x,y) - omega*updateVal;
+            error += updateVal*updateVal;
+        }
+    }
+
+    for(y=2; y<maxYCount-2; y++){
+        fY = yStart + (y-1)*deltaY;
+        for(x=1; x<maxXCount-1; x+=maxXCount-3){
+            fX = xStart + (x-1)*deltaX;
+            f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
+            updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
+                			(SRC(x,y-1) + SRC(x,y+1))*(*cy) +
+                			SRC(x,y)*(*cc) - f
+						)/(*cc);
+            DST(x,y) = SRC(x,y) - omega*updateVal;
+            error += updateVal*updateVal;
+        }
+    }
+
+    return error;//sqrt(error)/((maxXCount-2)*(maxYCount-2));
 }
 
 
@@ -121,7 +170,7 @@ int main(int argc, char **argv)
     int n, m, mits;
     double alpha, tol, relax;
     double maxAcceptableError;
-    double error;
+    double error, globalError;
     double *u, *u_old, *tmp;
     int allocCount;
     int iterationCount, maxIterationCount;
@@ -144,6 +193,7 @@ int main(int argc, char **argv)
     scanf("%lf", &tol);
 //    printf("Input mits - maximum solver iterations:\n");
     scanf("%d", &mits);
+    printf("-> %d, %d, %g, %g, %g, %d\n", n, m, alpha, relax, tol, mits);
     }
 
     // Proccess 0 reads the input, the rest get the input after proccess 0 bcasts it
@@ -184,6 +234,8 @@ int main(int argc, char **argv)
     double xLeft = -1.0, xRight = 1.0;
     double yBottom = -1.0, yUp = 1.0;
 
+    
+
     double deltaX = (xRight-xLeft)/(n-1);
     double deltaY = (yUp-yBottom)/(m-1);
 
@@ -215,6 +267,8 @@ int main(int argc, char **argv)
     {
         //printf("Iteration %i\n", iterationCount);
 
+        #ifdef DEBUG
+
         if(rank > -1){
             int l;
 	
@@ -239,9 +293,10 @@ int main(int argc, char **argv)
             }
 
         }
-        requestsCount = 0;
-
         write_table(u_old,size,rank,neighbors);
+        #endif
+
+        requestsCount = 0;
 
         if(neighbors[UP] >= 0){
             MPI_Irecv(&u_old[1], 1, table_row, neighbors[UP], 0, cart_comm, &RRequests[requestsCount]);
@@ -271,6 +326,19 @@ int main(int argc, char **argv)
             //printf("%d got/sent line from/to %d\n",rank,neighbors[RIGHT]);
         }
 
+        //printf("1\n");
+
+        #ifdef DEBUG
+
+        #else
+        error = one_jacobi_iteration(xLeft, yBottom,
+                                     n+2, m+2,
+                                     u_old, u,
+                                     deltaX, deltaY,
+                                     alpha, relax,
+                                     &JIV_cx, &JIV_cy, &JIV_cc);
+        #endif
+
 //        MPI_Wait(RRequests, MPI_STATUS_IGNORE); 
         MPI_Waitall(requestsCount, RRequests, MPI_STATUS_IGNORE);
         /*if(neighbors[UP] >= 0 ){
@@ -280,14 +348,16 @@ int main(int argc, char **argv)
             MPI_Wait(RRequests + DOWN, MPI_STATUS_IGNORE);
         }*/
 
-        //printf("1\n");
+        #ifdef DEBUG
 
-        /*error = one_jacobi_iteration(xLeft, yBottom,
-                                     n+2, m+2,
-                                     u_old, u,
-                                     deltaX, deltaY,
-                                     alpha, relax,
-                                     &JIV_cx, &JIV_cy, &JIV_cc, neighbors);*/
+        #else
+        error += one_halo_jacobi_iteration(xLeft, yBottom,
+                                    n+2, m+2,
+                                    u_old, u,
+                                    deltaX, deltaY,
+                                    alpha, relax,
+                                    &JIV_cx, &JIV_cy, &JIV_cc);
+        #endif
 
         //printf("\tError %g\n", error);
         iterationCount++;
@@ -295,6 +365,13 @@ int main(int argc, char **argv)
         tmp = u_old;
         u_old = u;
         u = tmp;
+
+        MPI_Reduce(&error, &globalError, 1, MPI_DOUBLE, MPI_SUM, 0, cart_comm);
+
+        if(rank == 0){
+            error = sqrt(globalError)/(n*m);
+            printf("\tError %g\n", error);
+        }
 
         //printf("2\n");
 //        MPI_Wait(SRequests, MPI_STATUS_IGNORE); 
@@ -311,7 +388,6 @@ int main(int argc, char **argv)
         
        //printf("4\n");
        write_table(u,size,rank,neighbors);
-       break;
     }
 
     t2 = MPI_Wtime();
@@ -321,16 +397,19 @@ int main(int argc, char **argv)
     
     diff = clock() - start;
     int msec = diff * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken %d seconds %d milliseconds\n", msec/1000, msec%1000);
-    printf("Residual %g\n",error);
 
-    // u_old holds the solution after the most recent buffers swap
-    double absoluteError = checkSolution(xLeft, yBottom,
-                                         n+2, m+2,
-                                         u_old,
-                                         deltaX, deltaY,
-                                         alpha);
-    printf("The error of the iterative solution is %g\n", absoluteError);
+    if(rank == 0){
+        printf("Time taken %d seconds %d milliseconds\n", msec/1000, msec%1000);
+        printf("Residual %g\n",error);
+
+        // u_old holds the solution after the most recent buffers swap
+        double absoluteError = checkSolution(xLeft, yBottom,
+                                            n+2, m+2,
+                                            u_old,
+                                            deltaX, deltaY,
+                                            alpha);
+        printf("The error of the iterative solution is %g\n", absoluteError);
+    }
 
     free(neighbors);
     free(coordinates);

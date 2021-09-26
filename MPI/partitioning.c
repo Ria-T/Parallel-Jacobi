@@ -4,6 +4,25 @@
 #include <mpi.h>
 #include "helpers.h"
 
+
+int calculate_range(double *a, double *b, int n, int processes){
+    n++;
+    if(*b <= *a) return -1;
+    double d = (*b - *a)/((double)processes);
+    if(n==1){
+        //*a = *a;
+        *b = *a + d;
+    }else if(n==processes){
+        *a = *a + (n-1)*d;
+        //*b = *b;
+    }else{
+        //[a+δ,a+2δ]
+        *a = *a+d*(n-1);
+        *b = *a+d*(n-1);
+    }
+    return 0;
+}
+
 void calculate_topology(int processes, int (*dims)[2]){
     double t;
     if( processes > 2 ){

@@ -19,6 +19,7 @@ int printr(int rank, const char* fmt, ...){
 }
 
 void write_table(double *table, int size[2], int rank, int *neighbors){
+    #ifdef DEBUG
     char filename[50];
     sprintf(filename,"valtabl%d",rank);
     FILE * file = fopen (filename, "a+");
@@ -32,10 +33,30 @@ void write_table(double *table, int size[2], int rank, int *neighbors){
         fprintf(file,"\n");
     }
     fprintf(file,"-------------------\n");
+
+    for(int y=1; y<size[1]+2-1; y+=size[1]+2-3){
+        for(int x=1; x<size[1]+2-1; x++){
+            fprintf(file,"%.2f ",table[y*(size[0]+2)+x]);
+        }
+    }
+
+    fprintf(file,"\n");
+
+    for(int y=2; y<size[1]+2-2; y++){
+        for(int x=1; x<size[1]+2-1; x+=size[1]+2-3){
+            fprintf(file,"%.2f ",table[y*(size[0]+2)+x]);
+        }
+    }
+    fprintf(file,"\n-------------------\n");
+
     fclose(file);
+    #else
+    return;
+    #endif
 }
 
 void draw_table(int bold[2][2], int size[2], int rank){
+    #ifdef DEBUG
     char filename[50];
     sprintf(filename,"tabl%d",rank);
     int file = open(filename, O_WRONLY | O_CREAT, S_IRWXU);
@@ -59,6 +80,9 @@ void draw_table(int bold[2][2], int size[2], int rank){
         write(file,"\n",1);
     }
     close(file);
+    #else
+    return;
+    #endif
 }
 
 void init_debug(){
