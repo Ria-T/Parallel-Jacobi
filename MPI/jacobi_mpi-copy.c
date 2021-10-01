@@ -233,9 +233,6 @@ int main(int argc, char **argv)
     maxAcceptableError = tol;
 
     // Solve in [-1, 1] x [-1, 1]
-    double actual_xLeft = -1.0, actual_xRight = 1.0;
-    double actual_yBottom = -1.0, actual_yUp = 1.0;
-
     double xLeft = -1.0, xRight = 1.0;
     double yBottom = -1.0, yUp = 1.0;
 
@@ -244,7 +241,7 @@ int main(int argc, char **argv)
 
     calculate_range(&xLeft, &xRight, card_cords[1], topology_dims[0]);
     calculate_range(&yBottom, &yUp, card_cords[0], topology_dims[1]);
-    if(rank==1){
+    if(rank==0){
         xLeft = -1.0;
         xRight = 1.0;
         yBottom = 0.0;
@@ -260,8 +257,8 @@ int main(int argc, char **argv)
     free(topology_dims);
     free(card_cords);
 
-    double deltaX = (actual_xRight-actual_xLeft)/(actual_n-1);//(n-1);
-    double deltaY = (actual_yUp-actual_yBottom)/(actual_m-1);//(m-1);
+    double deltaX = (xRight-xLeft)/(actual_n-1);//(n-1);
+    double deltaY = (yUp-yBottom)/(actual_m-1);//(m-1);
 
     iterationCount = 0;
     error = HUGE_VAL;
@@ -413,6 +410,7 @@ int main(int argc, char **argv)
         u_old = u;
         u = tmp;
 
+        printf("%d: reducing %f\n",rank,error);
         MPI_Reduce(&error, &globalError, 1, MPI_DOUBLE, MPI_SUM, 0, cart_comm);
 
         if(rank == 0){

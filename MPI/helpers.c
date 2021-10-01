@@ -19,7 +19,7 @@ int printr(int rank, const char* fmt, ...){
 }
 
 void write_table(double *table, int size[2], int rank, int *neighbors){
-    #ifdef DEBUG
+    //#ifdef DEBUG
     char filename[50];
     sprintf(filename,"valtabl%d",rank);
     FILE * file = fopen (filename, "a+");
@@ -35,7 +35,7 @@ void write_table(double *table, int size[2], int rank, int *neighbors){
     fprintf(file,"-------------------\n");
 
     for(int y=1; y<size[1]+2-1; y+=size[1]+2-3){
-        for(int x=1; x<size[1]+2-1; x++){
+        for(int x=1; x<size[0]+2-1; x++){
             fprintf(file,"%.2f ",table[y*(size[0]+2)+x]);
         }
     }
@@ -43,16 +43,24 @@ void write_table(double *table, int size[2], int rank, int *neighbors){
     fprintf(file,"\n");
 
     for(int y=2; y<size[1]+2-2; y++){
-        for(int x=1; x<size[1]+2-1; x+=size[1]+2-3){
+        for(int x=1; x<size[0]+2-1; x+=size[0]+2-3){
             fprintf(file,"%.2f ",table[y*(size[0]+2)+x]);
         }
     }
-    fprintf(file,"\n-------------------\n");
+    fprintf(file,"\n________________________\n");
+
+    /*for (int y = 2; y < (size[1]+2-2); y++){
+        for (int x = 2; x < (size[0]+2-2); x++){
+            fprintf(file,"%.2f ",table[y*(size[0]+2)+x]);
+        }
+        fprintf(file,"\n");
+    }
+    fprintf(file,"-------------------\n");*/
 
     fclose(file);
-    #else
-    return;
-    #endif
+    //#else
+    //return;
+    //#endif
 }
 
 void draw_table(int bold[2][2], int size[2], int rank){
@@ -63,8 +71,8 @@ void draw_table(int bold[2][2], int size[2], int rank){
     sprintf(filename,"table = %dx%d, got from %d,%d to %d,%d\n",size[0],size[1],bold[0][0],bold[0][1],bold[1][0],bold[1][1]);
     write(file,filename,strlen(filename)*sizeof(char));
     if(file<0) perror("open failed!\n");
-    for(int i=0; i<size[0]; i++){
-        for(int j=0; j<size[1]; j++){
+    for(int j=0; j<size[1]; j++){
+        for(int i=0; i<size[0]; i++){
             if( (i > bold[0][0] && j > bold[0][1]) && (i < bold[1][0] && j < bold[1][1]) ){
                 write(file," o",2);
             } else if( 
