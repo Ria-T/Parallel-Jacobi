@@ -50,8 +50,8 @@ void calculate_topology(int processes, int (*dims)[2]){
 
 int *get_neighbors(MPI_Comm *cart_comm){
     int *neighbors = malloc(sizeof(int)*4);
-    MPI_Cart_shift(*cart_comm, 0, 1, neighbors + UP, neighbors + DOWN);
-    MPI_Cart_shift(*cart_comm, 1, 1, neighbors + LEFT , neighbors + RIGHT);
+    MPI_Cart_shift(*cart_comm, 1, 1, neighbors + UP, neighbors + DOWN);
+    MPI_Cart_shift(*cart_comm, 0, 1, neighbors + LEFT , neighbors + RIGHT);
     return neighbors;
 }
 
@@ -65,14 +65,14 @@ void get_local_table(int *n, int *m, int** topology_dims, int ***coordinates, in
     MPI_Bcast(dims, 2, MPI_INT, 0, MPI_COMM_WORLD);
 
     //Swapping to have the right table in the topology
-    t = dims[0];
-    dims[0] = dims[1];
-    dims[1] = t;
+    //t = dims[0];
+    //dims[0] = dims[1];
+    //dims[1] = t;
     MPI_Cart_create( MPI_COMM_WORLD , 2, dims, periods, 1, cart_comm);
     //Swapping to have the right table in the topology
-    t = dims[0];
-    dims[0] = dims[1];
-    dims[1] = t;
+    //t = dims[0];
+   // dims[0] = dims[1];
+    //dims[1] = t;
 
     *topology_dims = malloc(sizeof(int)*2);
     (*topology_dims)[0] = dims[0];
@@ -82,9 +82,9 @@ void get_local_table(int *n, int *m, int** topology_dims, int ***coordinates, in
     MPI_Comm_rank(*cart_comm, &cart_rank);
     MPI_Cart_coords(*cart_comm,cart_rank,2,coords);
     //Swapping to have the right table in the topology
-    t = coords[0];
-    coords[0] = coords[1];
-    coords[1] = t;
+    //t = coords[0];
+    //coords[0] = coords[1];
+    //coords[1] = t;
 
     *coordinates = malloc(sizeof(int*)*2);
     (*coordinates)[0] = malloc(sizeof(int)*2); (*coordinates)[1] = malloc(sizeof(int)*2);

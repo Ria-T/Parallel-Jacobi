@@ -41,6 +41,8 @@
 #include "partitioning.h"
 #include "helpers.h"
 
+int grank;
+
 /*************************************************************
  * Performs one iteration of the Jacobi method and computes
  * the residual value.
@@ -80,8 +82,10 @@
 						)/(*cc);
             DST(x,y) = SRC(x,y) - omega*updateVal;
             error += updateVal*updateVal;
+            //if(grank == 0) printf("[%d,%d]=%f,%f _-_ ",x,y,fY,fX);
         }
     }
+    //if(grank == 0) printf("\n");
     return error;//sqrt(error)/((maxXCount-2)*(maxYCount-2));
 }
 
@@ -244,16 +248,16 @@ int main(int argc, char **argv)
 
     calculate_range(&xLeft, &xRight, card_cords[1], topology_dims[0]);
     calculate_range(&yBottom, &yUp, card_cords[0], topology_dims[1]);
-    if(rank==1){
+    if(rank==0){
         xLeft = -1.0;
         xRight = 1.0;
-        yBottom = 0.0;
+        yBottom = -1.0;//0.0;
         yUp = 1.0;
     }else{
         xLeft = -1.0;
         xRight = 1.0;
         yBottom = -1.0;
-        yUp = 0.0;
+        yUp = 1.0;//0.0;
     }
     printf("(%d:%d,%d) out of [-1,1] I get [%f,%f] & [%f,%f]\n",rank,card_cords[0],card_cords[1],xLeft,xRight,yBottom,yUp);
 
@@ -287,10 +291,11 @@ int main(int argc, char **argv)
     //init_debug();
 
     /* Iterate as long as it takes to meet the convergence criterion */
-    int kkk=2;
+    int kkk=1;
+    grank = rank;
     while (iterationCount < maxIterationCount && error > maxAcceptableError && kkk > 0)
     {
-        kkk--;
+        //kkk--;
         //printf("Iteration %i\n", iterationCount);
 
         #ifdef DEBUG
@@ -440,7 +445,6 @@ int main(int argc, char **argv)
        write_table(u,size,rank,neighbors);
        break;
        #endif
-       write_table(u,size,rank,neighbors);
     }
 
     t2 = MPI_Wtime();
