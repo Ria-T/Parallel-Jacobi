@@ -272,7 +272,6 @@ int main(int argc, char **argv)
     }*/
     printf("(%d:%d,%d) out of [-1,1] I get [%f,%f] & [%f,%f]\n",rank,card_cords[0],card_cords[1],xLeft,xRight,yBottom,yUp);
 
-    free(topology_dims);
     free(card_cords);
 
     iterationCount = 0;
@@ -468,16 +467,13 @@ int main(int argc, char **argv)
     write_table(u_old,size,rank,neighbors);
     #endif
 
-    MPI_Type_vector(n+2, 1, 1, MPI_DOUBLE, &full_table_row);
-    MPI_Type_commit(&full_table_row);
-
     if(rank == 0){
         printf("Time taken %d seconds %d milliseconds\n", msec/1000, msec%1000);
         printf("Residual %g\n",error);
 
         // u_old holds the solution after the most recent buffers swap
         int actual_size[2]; actual_size[0] = actual_n; actual_size[1] = actual_m;
-        if( recieve_big_table(&u_old, size, actual_size, world_size, &cart_comm, &full_table_row) == 0){
+        if( recieve_big_table(&u_old, size, actual_size, world_size, &cart_comm, topology_dims) == 0){
             write_table(u_old,actual_size,rank,neighbors);
             double absoluteError = checkSolution(xLeft, yBottom,
                                                 actual_n+2, actual_m+2,
@@ -488,12 +484,14 @@ int main(int argc, char **argv)
         }else printf("Could not calculate error of the iterative solution due to memory limitations...\n");        
     }else{
         printf("%d sending\n",rank);
-        MPI_Send(u_old+(n+2+1), m, full_table_row, 0, 0, cart_comm);
+        for(int row=0; row<m; row++)
+            MPI_Send(u_old+(row+1)*(n+2)+1, n, MPI_DOUBLE, 0, 0, cart_comm);
         printf("%d sent\n",rank);
     }
 
     free(neighbors);
     free(coordinates);
+    free(topology_dims);
     MPI_Finalize();
     return 0;
 }

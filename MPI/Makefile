@@ -17,7 +17,7 @@ helpers.o: helpers.c helpers.h
 jacobi_mpi.o: jacobi_mpi.c
 	$(CC) $(cflags) -c jacobi_mpi.c -o jacobi_mpi.o
 
-table_commuting.o: table_commuting.c
+table_commuting.o: table_commuting.c table_commuting.h
 	$(CC) $(cflags) -c table_commuting.c -o table_commuting.o
 
 sub: all wash
