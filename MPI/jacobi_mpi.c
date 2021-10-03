@@ -40,6 +40,7 @@
 
 #include "partitioning.h"
 #include "helpers.h"
+#include "table_commuting.h"
 
 int grank;
 
@@ -68,10 +69,15 @@ int grank;
     /*double cx = 1.0/(deltaX*deltaX);
     double cy = 1.0/(deltaY*deltaY);
     double cc = -2.0*cx-2.0*cy-alpha;*/
+FILE *d;
+char name[50];
+sprintf(name,"itterdebug%d",grank);
+//d = fopen(name, "a");
 
     for (y = 2; y < (maxYCount-2); y++)
     {
         fY = yStart + (y-1)*deltaY;
+            //fprintf(d, "[%d -> %f = %f + %d * %f ] /\\",y*(grank+1),fY,yStart,(y-1),deltaY);
         for (x = 2; x < (maxXCount-2); x++)
         {
             fX = xStart + (x-1)*deltaX;
@@ -85,6 +91,8 @@ int grank;
             //if(grank == 0) printf("[%d,%d]=%f,%f _-_ ",x,y,fY,fX);
         }
     }
+
+//fprintf(d, "\n"); fclose(d);
     //if(grank == 0) printf("\n");
     return error;//sqrt(error)/((maxXCount-2)*(maxYCount-2));
 }
@@ -246,26 +254,26 @@ int main(int argc, char **argv)
     card_cords = malloc(sizeof(int)*2);
     MPI_Cart_coords(cart_comm, rank, 2, card_cords);
 
-    calculate_range(&xLeft, &xRight, card_cords[1], topology_dims[0]);
-    calculate_range(&yBottom, &yUp, card_cords[0], topology_dims[1]);
-    if(rank==0){
+    double deltaX = (actual_xRight-actual_xLeft)/(actual_n-1);//(n-1);
+    double deltaY = (actual_yUp-actual_yBottom)/(actual_m-1);//(m-1);
+
+    calculate_range(actual_xLeft,actual_xRight, &xLeft, &xRight, deltaX, coordinates[0][0], coordinates[1][0]);
+    calculate_range(actual_yBottom,actual_yUp, &yBottom, &yUp, deltaY, coordinates[0][1], coordinates[0][0]);
+    /*if(rank==0){
         xLeft = -1.0;
         xRight = 1.0;
-        yBottom = -1.0;//0.0;
+        yBottom = -1.0;
         yUp = 1.0;
     }else{
         xLeft = -1.0;
         xRight = 1.0;
-        yBottom = -1.0;
-        yUp = 1.0;//0.0;
-    }
+        yBottom = -1 + deltaY*coordinates[0][1];
+        yUp = 0.0;
+    }*/
     printf("(%d:%d,%d) out of [-1,1] I get [%f,%f] & [%f,%f]\n",rank,card_cords[0],card_cords[1],xLeft,xRight,yBottom,yUp);
 
     free(topology_dims);
     free(card_cords);
-
-    double deltaX = (actual_xRight-actual_xLeft)/(actual_n-1);//(n-1);
-    double deltaY = (actual_yUp-actual_yBottom)/(actual_m-1);//(m-1);
 
     iterationCount = 0;
     error = HUGE_VAL;
@@ -279,7 +287,7 @@ int main(int argc, char **argv)
 
     MPI_Request SRequests[4],RRequests[4];
     int RrequestsCount = 0,SrequestsCount = 0;
-    MPI_Datatype table_row, table_column;
+    MPI_Datatype table_row, table_column,full_table_row;
     MPI_Type_vector(n, 1, 1, MPI_DOUBLE, &table_row);
     MPI_Type_commit(&table_row);
     MPI_Type_vector(m, 1, n+2, MPI_DOUBLE, &table_column);
@@ -291,7 +299,7 @@ int main(int argc, char **argv)
     //init_debug();
 
     /* Iterate as long as it takes to meet the convergence criterion */
-    int kkk=1;
+    int kkk=3;
     grank = rank;
     while (iterationCount < maxIterationCount && error > maxAcceptableError && kkk > 0)
     {
@@ -445,11 +453,11 @@ int main(int argc, char **argv)
        write_table(u,size,rank,neighbors);
        break;
        #endif
+       //write_table(u,size,rank,neighbors);
     }
 
     t2 = MPI_Wtime();
     printf( "Iterations=%3d Elapsed MPI Wall time is %f\n", iterationCount, t2 - t1 ); 
-    MPI_Finalize();
 
     diff = clock() - start;
     int msec = diff * 1000 / CLOCKS_PER_SEC;
@@ -460,20 +468,32 @@ int main(int argc, char **argv)
     write_table(u_old,size,rank,neighbors);
     #endif
 
+    MPI_Type_vector(n+2, 1, 1, MPI_DOUBLE, &full_table_row);
+    MPI_Type_commit(&full_table_row);
+
     if(rank == 0){
         printf("Time taken %d seconds %d milliseconds\n", msec/1000, msec%1000);
         printf("Residual %g\n",error);
 
         // u_old holds the solution after the most recent buffers swap
-        double absoluteError = checkSolution(xLeft, yBottom,
-                                            n+2, m+2,
-                                            u_old,
-                                            deltaX, deltaY,
-                                            alpha);
-        printf("The error of the iterative solution is %g\n", absoluteError);
+        int actual_size[2]; actual_size[0] = actual_n; actual_size[1] = actual_m;
+        if( recieve_big_table(&u_old, size, actual_size, world_size, &cart_comm, &full_table_row) == 0){
+            write_table(u_old,actual_size,rank,neighbors);
+            double absoluteError = checkSolution(xLeft, yBottom,
+                                                actual_n+2, actual_m+2,
+                                                u_old,
+                                                deltaX, deltaY,
+                                                alpha);
+            printf("The error of the iterative solution is %g\n", absoluteError);
+        }else printf("Could not calculate error of the iterative solution due to memory limitations...\n");        
+    }else{
+        printf("%d sending\n",rank);
+        MPI_Send(u_old+(n+2+1), m, full_table_row, 0, 0, cart_comm);
+        printf("%d sent\n",rank);
     }
 
     free(neighbors);
     free(coordinates);
+    MPI_Finalize();
     return 0;
 }

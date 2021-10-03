@@ -2,7 +2,7 @@ CC = mpicc
 cflags = -O3 -g -Wall
 libraries = -lm
 
-objects = jacobi_mpi.o helpers.o partitioning.o
+objects = jacobi_mpi.o helpers.o partitioning.o table_commuting.o
 executable = jacobi_mpi.x
 
 all: $(objects)
@@ -16,6 +16,9 @@ helpers.o: helpers.c helpers.h
 
 jacobi_mpi.o: jacobi_mpi.c
 	$(CC) $(cflags) -c jacobi_mpi.c -o jacobi_mpi.o
+
+table_commuting.o: table_commuting.c
+	$(CC) $(cflags) -c table_commuting.c -o table_commuting.o
 
 sub: all wash
 	qsub PBSseqJ.sh
