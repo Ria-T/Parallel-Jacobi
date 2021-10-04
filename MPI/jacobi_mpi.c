@@ -40,9 +40,6 @@
 
 #include "partitioning.h"
 #include "helpers.h"
-#include "table_commuting.h"
-
-int grank;
 
 /*************************************************************
  * Performs one iteration of the Jacobi method and computes
@@ -51,7 +48,7 @@ int grank;
  * NOTE: u(0,*), u(maxXCount-1,*), u(*,0) and u(*,maxYCount-1)
  * are BOUNDARIES and therefore not part of the solution.
  *************************************************************/
-/*inline*/ double one_jacobi_iteration(double xStart, double yStart,
+inline double one_jacobi_iteration(double xStart, double yStart,
                             int maxXCount, int maxYCount,
                             double *src, double *dst,
                             double deltaX, double deltaY,
@@ -69,15 +66,10 @@ int grank;
     /*double cx = 1.0/(deltaX*deltaX);
     double cy = 1.0/(deltaY*deltaY);
     double cc = -2.0*cx-2.0*cy-alpha;*/
-FILE *d;
-char name[50];
-sprintf(name,"itterdebug%d",grank);
-//d = fopen(name, "a");
 
     for (y = 2; y < (maxYCount-2); y++)
     {
         fY = yStart + (y-1)*deltaY;
-            //fprintf(d, "[%d -> %f = %f + %d * %f ] /\\",y*(grank+1),fY,yStart,(y-1),deltaY);
         for (x = 2; x < (maxXCount-2); x++)
         {
             fX = xStart + (x-1)*deltaX;
@@ -88,16 +80,13 @@ sprintf(name,"itterdebug%d",grank);
 						)/(*cc);
             DST(x,y) = SRC(x,y) - omega*updateVal;
             error += updateVal*updateVal;
-            //if(grank == 0) printf("[%d,%d]=%f,%f _-_ ",x,y,fY,fX);
         }
     }
 
-//fprintf(d, "\n"); fclose(d);
-    //if(grank == 0) printf("\n");
     return error;//sqrt(error)/((maxXCount-2)*(maxYCount-2));
 }
 
-/*inline*/ double one_halo_jacobi_iteration(double xStart, double yStart,
+inline double one_halo_jacobi_iteration(double xStart, double yStart,
                             int maxXCount, int maxYCount,
                             double *src, double *dst,
                             double deltaX, double deltaY,
@@ -220,12 +209,10 @@ int main(int argc, char **argv)
     actual_m = m;
 
     MPI_Comm cart_comm;
-    int size[2], *neighbors, **coordinates, *topology_dims;
+    int *neighbors, **coordinates, *topology_dims;
     get_local_table(&n, &m, &topology_dims, &coordinates, &rank, world_size,&cart_comm);
     n = coordinates[1][0]-coordinates[0][0]+1;
     m = coordinates[1][1]-coordinates[0][1]+1;
-    size[0] = n;
-    size[1] = m;
     printf("%d:%dx%d\n",rank,n,m);
     neighbors = get_neighbors(&cart_comm);
 
@@ -259,17 +246,7 @@ int main(int argc, char **argv)
 
     calculate_range(actual_xLeft,actual_xRight, &xLeft, &xRight, deltaX, coordinates[0][0], coordinates[1][0]);
     calculate_range(actual_yBottom,actual_yUp, &yBottom, &yUp, deltaY, coordinates[0][1], coordinates[0][0]);
-    /*if(rank==0){
-        xLeft = -1.0;
-        xRight = 1.0;
-        yBottom = -1.0;
-        yUp = 1.0;
-    }else{
-        xLeft = -1.0;
-        xRight = 1.0;
-        yBottom = -1 + deltaY*coordinates[0][1];
-        yUp = 0.0;
-    }*/
+
     printf("(%d:%d,%d) out of [-1,1] I get [%f,%f] & [%f,%f]\n",rank,card_cords[0],card_cords[1],xLeft,xRight,yBottom,yUp);
 
     free(card_cords);
@@ -286,61 +263,18 @@ int main(int argc, char **argv)
 
     MPI_Request SRequests[4],RRequests[4];
     int RrequestsCount = 0,SrequestsCount = 0;
-    MPI_Datatype table_row, table_column,full_table_row;
+    MPI_Datatype table_row, table_column;
     MPI_Type_vector(n, 1, 1, MPI_DOUBLE, &table_row);
     MPI_Type_commit(&table_row);
     MPI_Type_vector(m, 1, n+2, MPI_DOUBLE, &table_column);
     MPI_Type_commit(&table_column);
 
-    //MPI_Init(NULL,NULL); should it get up?
     t1 = MPI_Wtime();
 
-    //init_debug();
-
     /* Iterate as long as it takes to meet the convergence criterion */
-    int kkk=3;
-    grank = rank;
-    while (iterationCount < maxIterationCount && error > maxAcceptableError && kkk > 0)
+    while (iterationCount < maxIterationCount && error > maxAcceptableError)
     {
-        //kkk--;
         //printf("Iteration %i\n", iterationCount);
-
-        #ifdef DEBUG
-
-        if(rank > -1){
-            int l,kk;
-	
-			// second row
-            for(l=1; l<n+1; l++){
-                u_old[1*(n+2)+l]=0.1+rank+((float)( (l-1)%10 )-1.0)/100.0;
-            }
-			
-			// pre last row
-            for(l=2; l<n+1; l++){
-                u_old[(m)*(n+2)+l]=0.2+rank+((float)( (l-2)%10 )-2.0)/100.0;
-            }
-			
-			// left column + 1
-			for(l=1; l<m+1; l++){
-                u_old[l*(n+2)+1]=0.3+rank+((float)( (l-1)%10 )-1.0)/100.0;
-            }
-			
-			// right column - 1
-			for(l=1; l<m+1; l++){
-                u_old[(l)*(n+2)+n]=0.4+rank+((float)( (l-1)%10 )-1.0)/100.0;
-            }
-
-
-            //center
-            for(l=2; l<n; l++){
-                for(kk=2; kk<m; kk++){
-                    u_old[(kk)*(n+2)+l]=0.91;
-                }
-            }
-
-        }
-        write_table(u_old,size,rank,neighbors);
-        #endif
 
         RrequestsCount = 0;
         SrequestsCount = 0;
@@ -385,38 +319,21 @@ int main(int argc, char **argv)
             SrequestsCount++;
         }
 
-        //printf("1\n");
-
-        #ifdef DEBUG
-
-        #else
         error = one_jacobi_iteration(xLeft, yBottom,
                                      n+2, m+2,
                                      u_old, u,
                                      deltaX, deltaY,
                                      alpha, relax,
                                      &JIV_cx, &JIV_cy, &JIV_cc);
-        #endif
 
-//        MPI_Wait(RRequests, MPI_STATUS_IGNORE); 
         MPI_Waitall(RrequestsCount, RRequests, MPI_STATUS_IGNORE);
-        /*if(neighbors[UP] >= 0 ){
-            MPI_Wait(RRequests + UP, MPI_STATUS_IGNORE); 
-        }
-        if(neighbors[DOWN] >= 0 ){
-            MPI_Wait(RRequests + DOWN, MPI_STATUS_IGNORE);
-        }*/
 
-        #ifdef DEBUG
-
-        #else
         error += one_halo_jacobi_iteration(xLeft, yBottom,
                                     n+2, m+2,
                                     u_old, u,
                                     deltaX, deltaY,
                                     alpha, relax,
                                     &JIV_cx, &JIV_cy, &JIV_cc);
-        #endif
 
         //printf("\tError %g\n", error);
         iterationCount++;
@@ -429,30 +346,12 @@ int main(int argc, char **argv)
 
         if(rank == 0){
             error = sqrt(globalError)/(actual_n*actual_m);
-            printf("\tsqrt(%f)/(%d*%d)=%g\n",globalError,actual_n,actual_m,error);
+            //printf("\tsqrt(%f)/(%d*%d)=%g\n",globalError,actual_n,actual_m,error);
             //printf("\tError %g\n", error);
         }
         MPI_Bcast(&error, 1, MPI_DOUBLE, 0, cart_comm);
 
-        //printf("2\n");
-//        MPI_Wait(SRequests, MPI_STATUS_IGNORE); 
-        //printf("rank %d wait for %d\n",rank,requestsCount);
         MPI_Waitall(SrequestsCount, SRequests, MPI_STATUS_IGNORE);
-        /*if(neighbors[UP] >= 0 ){
-           MPI_Wait(SRequests + UP, MPI_STATUS_IGNORE); 
-        }*/
-        
-        //printf("3\n");
-        /*if(neighbors[DOWN] >= 0 ){
-            MPI_Wait(SRequests + DOWN, MPI_STATUS_IGNORE);
-        }*/
-        
-       //printf("4\n");
-       #ifdef DEBUG
-       write_table(u,size,rank,neighbors);
-       break;
-       #endif
-       //write_table(u,size,rank,neighbors);
     }
 
     t2 = MPI_Wtime();
@@ -460,12 +359,6 @@ int main(int argc, char **argv)
 
     diff = clock() - start;
     int msec = diff * 1000 / CLOCKS_PER_SEC;
-
-    #ifdef DEBUG
-
-    #else
-    //write_table(u_old,size,rank,neighbors);
-    #endif
 
     free(u);
 
@@ -482,7 +375,6 @@ int main(int argc, char **argv)
         printf("Time taken %d seconds %d milliseconds\n", msec/1000, msec%1000);
         printf("Residual %g\n",error);
         // u_old holds the solution after the most recent buffers swap
-        //write_table(u_old,actual_size,rank,neighbors);
         total_absoluteError = sqrt(total_absoluteError)/(actual_n*actual_m);
         printf("The error of the iterative solution is %g\n", total_absoluteError);
     }

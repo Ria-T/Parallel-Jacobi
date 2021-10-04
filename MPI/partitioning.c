@@ -43,7 +43,7 @@ int *get_neighbors(MPI_Comm *cart_comm){
 }
 
 void get_local_table(int *n, int *m, int** topology_dims, int ***coordinates, int *rank, int world_size, MPI_Comm *cart_comm){
-    int dims[2], periods[2] = {0, 0}, size[2], coords[2], bold[2][2],t;
+    int dims[2], periods[2] = {0, 0}, size[2], coords[2], bold[2][2];
 
     if(*rank == 0){
         calculate_topology(world_size, &dims);
