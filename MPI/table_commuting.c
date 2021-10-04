@@ -6,10 +6,12 @@
 
 void get_neighbors_in_order(MPI_Comm *communicator, int ***topology_ranks, int *topology_dims){
     int cords[2];
+
     *topology_ranks = malloc(sizeof(int) * topology_dims[0]);
 
     for(int i=0; i<topology_dims[0]; i++)
         (*topology_ranks)[i] = malloc(sizeof(int) * topology_dims[1]);
+
 
     for(int i=0; i<topology_dims[0]; i++){
         for(int j=0; j<topology_dims[1]; j++){
@@ -21,6 +23,7 @@ void get_neighbors_in_order(MPI_Comm *communicator, int ***topology_ranks, int *
         }
         printf("\n");
     }
+
 }
 
 void cwrite_table(double *table, int size[2]){
