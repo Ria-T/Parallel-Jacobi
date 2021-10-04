@@ -173,7 +173,7 @@ double checkSolution(double xStart, double yStart,
             error += localError*localError;
         }
     }
-    return sqrt(error)/((maxXCount-2)*(maxYCount-2));
+    return error;//sqrt(error)/((maxXCount-2)*(maxYCount-2));
 }
 
 
@@ -469,26 +469,22 @@ int main(int argc, char **argv)
 
     free(u);
 
+    double absoluteError = checkSolution(xLeft, yBottom,
+                                        n+2, m+2,
+                                        u_old,
+                                        deltaX, deltaY,
+                                        alpha);
+
+    double total_absoluteError;
+    MPI_Reduce(&absoluteError, &total_absoluteError, 1, MPI_DOUBLE, MPI_SUM, 0, cart_comm);
+
     if(rank == 0){
         printf("Time taken %d seconds %d milliseconds\n", msec/1000, msec%1000);
         printf("Residual %g\n",error);
-
         // u_old holds the solution after the most recent buffers swap
-        int actual_size[2]; actual_size[0] = actual_n; actual_size[1] = actual_m;
-        if( recieve_big_table(&u_old, size, actual_size, world_size, &cart_comm, topology_dims) == 0){
-            //write_table(u_old,actual_size,rank,neighbors);
-            double absoluteError = checkSolution(xLeft, yBottom,
-                                                actual_n+2, actual_m+2,
-                                                u_old,
-                                                deltaX, deltaY,
-                                                alpha);
-            printf("The error of the iterative solution is %g\n", absoluteError);
-        }else printf("Could not calculate error of the iterative solution due to memory limitations...\n");        
-    }else{
-        printf("%d sending\n",rank);
-        for(int row=0; row<m; row++)
-            MPI_Send(u_old+(row+1)*(n+2)+1, n, MPI_DOUBLE, 0, 0, cart_comm);
-        printf("%d sent\n",rank);
+        //write_table(u_old,actual_size,rank,neighbors);
+        total_absoluteError = sqrt(total_absoluteError)/(actual_n*actual_m);
+        printf("The error of the iterative solution is %g\n", total_absoluteError);
     }
 
     free(u_old);
