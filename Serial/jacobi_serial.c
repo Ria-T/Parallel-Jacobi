@@ -234,6 +234,8 @@ int main(int argc, char **argv)
                                          deltaX, deltaY,
                                          alpha);
     printf("The error of the iterative solution is %g\n", absoluteError);
+	
+	free(u); free(u_old);
 
     return 0;
 }

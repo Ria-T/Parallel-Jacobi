@@ -5,25 +5,26 @@
 #include <stdio.h>
 
 void get_neighbors_in_order(MPI_Comm *communicator, int ***topology_ranks, int *topology_dims){
+    printf("okkkkkkkkkkkkk 1\n");
     int cords[2];
 
     *topology_ranks = malloc(sizeof(int) * topology_dims[0]);
-
+    printf("okkkkkkkkkkkkk 2\n");
     for(int i=0; i<topology_dims[0]; i++)
         (*topology_ranks)[i] = malloc(sizeof(int) * topology_dims[1]);
 
-
-    for(int i=0; i<topology_dims[0]; i++){
-        for(int j=0; j<topology_dims[1]; j++){
-            cords[0]=j;
-            cords[1]=i;
+    printf("okkkkkkkkkkkkk 3\n");
+    for(int j=0; j<topology_dims[1]; j++){
+        for(int i=0; i<topology_dims[0]; i++){
+            cords[0]=i;
+            cords[1]=j;
             MPI_Cart_rank(*communicator, cords, &(*topology_ranks)[i][j]);
             //MPI_Cart_shift(*communicator, 1, 1, &neighbours[i][j], &dummy_neighbour);
             printf("%d, ",(*topology_ranks)[i][j]);
         }
         printf("\n");
     }
-
+    printf("okkkkkkkkkkkkk 4\n");
 }
 
 void cwrite_table(double *table, int size[2]){
@@ -50,7 +51,7 @@ int recieve_big_table(double **u, int small_size[2], int actual_size[2], int wor
     get_neighbors_in_order(communicator,&topology_ranks,topology_dims);
 
     double *big_u = (double*)calloc((actual_size[0]+2)*(actual_size[1]+2), sizeof(double));
-    if(big_u == NULL) return -1;
+    if(big_u == NULL) { printf("calloc!"); perror("calloc!"); return -1; }
     istep = 0;
     jstep = 1;
     i = 1;
@@ -74,15 +75,15 @@ int recieve_big_table(double **u, int small_size[2], int actual_size[2], int wor
     i = 1;
     j = 1;
 
-    for(int t_i=0; t_i < topology_dims[0]; t_i++){
+    for(int t_j=0; t_j < topology_dims[1]; t_j++){
         i = 1;
-        for(int t_j=0; t_j < topology_dims[1]; t_j++){
+        for(int t_i=0; t_i < topology_dims[0]; t_i++){
 
             if(topology_ranks[t_i][t_j] != 0){
                 printf("%d reciving with %d,%d\n",topology_ranks[t_i][t_j],i,j);
                 for(int row=0; row<small_size[1]; row++){
                     MPI_Recv(
-                        big_u +  (row+j)*(actual_size[0]+2) + i,
+                        big_u /*+  (row+j)*(actual_size[0]+2) + i*/,
                         small_size[0],
                         MPI_DOUBLE,
                         topology_ranks[t_i][t_j],

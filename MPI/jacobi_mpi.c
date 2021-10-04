@@ -464,8 +464,10 @@ int main(int argc, char **argv)
     #ifdef DEBUG
 
     #else
-    write_table(u_old,size,rank,neighbors);
+    //write_table(u_old,size,rank,neighbors);
     #endif
+
+    free(u);
 
     if(rank == 0){
         printf("Time taken %d seconds %d milliseconds\n", msec/1000, msec%1000);
@@ -474,7 +476,7 @@ int main(int argc, char **argv)
         // u_old holds the solution after the most recent buffers swap
         int actual_size[2]; actual_size[0] = actual_n; actual_size[1] = actual_m;
         if( recieve_big_table(&u_old, size, actual_size, world_size, &cart_comm, topology_dims) == 0){
-            write_table(u_old,actual_size,rank,neighbors);
+            //write_table(u_old,actual_size,rank,neighbors);
             double absoluteError = checkSolution(xLeft, yBottom,
                                                 actual_n+2, actual_m+2,
                                                 u_old,
@@ -489,6 +491,7 @@ int main(int argc, char **argv)
         printf("%d sent\n",rank);
     }
 
+    free(u_old);
     free(neighbors);
     free(coordinates);
     free(topology_dims);
