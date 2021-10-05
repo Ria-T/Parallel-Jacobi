@@ -1,5 +1,5 @@
 CC = mpicc
-cflags = -O3 -g -Wall
+cflags = -fopenmp -O3 -g -Wall
 libraries = -lm
 
 objects = jacobi_mpi.o helpers.o partitioning.o

@@ -37,6 +37,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <mpi.h>
+#include <omp.h>
 
 #include "partitioning.h"
 #include "helpers.h"
@@ -67,19 +68,32 @@ inline double one_jacobi_iteration(double xStart, double yStart,
     double cy = 1.0/(deltaY*deltaY);
     double cc = -2.0*cx-2.0*cy-alpha;*/
 
-    for (y = 2; y < (maxYCount-2); y++)
+    #pragma omp parallel default(none) \
+    shared(xStart, yStart, deltaX, deltaY, maxXCount, maxYCount, src, dst, omega, alpha, cx, cy, cc) \
+    private(fX, fY, x, y, f, updateVal) \
+    reduction (+: error)
     {
-        fY = yStart + (y-1)*deltaY;
-        for (x = 2; x < (maxXCount-2); x++)
+        #pragma omp for
+        for (y = 2; y < (maxYCount-2); y++)
         {
-            fX = xStart + (x-1)*deltaX;
-            f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
-            updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
-                			(SRC(x,y-1) + SRC(x,y+1))*(*cy) +
-                			SRC(x,y)*(*cc) - f
-						)/(*cc);
-            DST(x,y) = SRC(x,y) - omega*updateVal;
-            error += updateVal*updateVal;
+            fY = yStart + (y-1)*deltaY;
+            for (x = 2; x < (maxXCount-2); x++)
+            {
+                fX = xStart + (x-1)*deltaX;
+                f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
+
+                #pragma omp critical
+                updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
+                                (SRC(x,y-1) + SRC(x,y+1))*(*cy) +
+                                SRC(x,y)*(*cc) - f
+                            )/(*cc);
+
+                #pragma omp critical
+                DST(x,y) = SRC(x,y) - omega*updateVal;
+
+                //#pragma omp atomic
+                error += updateVal*updateVal;
+            }
         }
     }
 
