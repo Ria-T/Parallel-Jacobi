@@ -41,6 +41,22 @@
 #include "partitioning.h"
 #include "helpers.h"
 
+// fy, fx values are standard, but the program recallculates them at each itteration.
+// Having an arrey with all the values pre-calculated once saves a lot of computing time in the itteration
+int calculate_fX_fY_arreys(double xStart, double yStart, int n, int m, double deltaX, double deltaY, double **fX, double **fY){
+	*fX = (double*)calloc(n, sizeof(double));
+	*fY = (double*)calloc(m, sizeof(double));
+	if( *fX == NULL || *fY == NULL) return -1;
+	for (int x = 0; x < n; x++){
+		(*fX)[x] = xStart + x*deltaX;
+	}
+	for (int y = 0; y < m; y++){
+		(*fY)[y] = yStart + y*deltaY;
+	}
+	return 0;
+	
+}
+
 /*************************************************************
  * Performs one iteration of the Jacobi method and computes
  * the residual value.
@@ -53,12 +69,13 @@ inline double one_jacobi_iteration(double xStart, double yStart,
                             double *src, double *dst,
                             double deltaX, double deltaY,
                             double alpha, double omega,
-                            double const * const cx, double const * const cy, double const * const cc)
+                            double const * const cx, double const * const cy, double const * const cc,
+                            double *fX, double *fY)
 {
 #define SRC(XX,YY) src[(YY)*maxXCount+(XX)]
 #define DST(XX,YY) dst[(YY)*maxXCount+(XX)]
     int x, y;
-    double fX, fY;
+    //double fX, fY;
     double error = 0.0;
     double updateVal;
     double f;
@@ -67,13 +84,9 @@ inline double one_jacobi_iteration(double xStart, double yStart,
     double cy = 1.0/(deltaY*deltaY);
     double cc = -2.0*cx-2.0*cy-alpha;*/
 
-    for (y = 2; y < (maxYCount-2); y++)
-    {
-        fY = yStart + (y-1)*deltaY;
-        for (x = 2; x < (maxXCount-2); x++)
-        {
-            fX = xStart + (x-1)*deltaX;
-            f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
+    for (y = 2; y < (maxYCount-2); y++){
+        for (x = 2; x < (maxXCount-2); x++){
+            f = -alpha*(1.0-fX[x-1]*fX[x-1])*(1.0-fY[y-1]*fY[y-1]) - 2.0*(1.0-fX[x-1]*fX[x-1]) - 2.0*(1.0-fY[y-1]*fY[y-1]);
             updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
                 			(SRC(x,y-1) + SRC(x,y+1))*(*cy) +
                 			SRC(x,y)*(*cc) - f
@@ -91,12 +104,13 @@ inline double one_halo_jacobi_iteration(double xStart, double yStart,
                             double *src, double *dst,
                             double deltaX, double deltaY,
                             double alpha, double omega,
-                            double const * const cx, double const * const cy, double const * const cc)
+                            double const * const cx, double const * const cy, double const * const cc,
+                            double *fX, double *fY)
 {
 #define SRC(XX,YY) src[(YY)*maxXCount+(XX)]
 #define DST(XX,YY) dst[(YY)*maxXCount+(XX)]
     int x, y;
-    double fX, fY;
+    //double fX, fY;
     double error = 0.0;
     double updateVal;
     double f;
@@ -106,10 +120,8 @@ inline double one_halo_jacobi_iteration(double xStart, double yStart,
     double cc = -2.0*cx-2.0*cy-alpha;*/
 
     for(y=1; y<maxYCount-1; y+=maxYCount-3){
-        fY = yStart + (y-1)*deltaY;
         for(x=1; x<maxXCount-1; x++){
-            fX = xStart + (x-1)*deltaX;
-            f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
+            f = -alpha*(1.0-fX[x-1]*fX[x-1])*(1.0-fY[y-1]*fY[y-1]) - 2.0*(1.0-fX[x-1]*fX[x-1]) - 2.0*(1.0-fY[y-1]*fY[y-1]);
             updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
                 			(SRC(x,y-1) + SRC(x,y+1))*(*cy) +
                 			SRC(x,y)*(*cc) - f
@@ -120,10 +132,8 @@ inline double one_halo_jacobi_iteration(double xStart, double yStart,
     }
 
     for(y=2; y<maxYCount-2; y++){
-        fY = yStart + (y-1)*deltaY;
         for(x=1; x<maxXCount-1; x+=maxXCount-3){
-            fX = xStart + (x-1)*deltaX;
-            f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
+            f = -alpha*(1.0-fX[x-1]*fX[x-1])*(1.0-fY[y-1]*fY[y-1]) - 2.0*(1.0-fX[x-1]*fX[x-1]) - 2.0*(1.0-fY[y-1]*fY[y-1]);
             updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
                 			(SRC(x,y-1) + SRC(x,y+1))*(*cy) +
                 			SRC(x,y)*(*cc) - f
@@ -260,6 +270,10 @@ int main(int argc, char **argv)
     double JIV_cx = 1.0/(deltaX*deltaX);
     double JIV_cy = 1.0/(deltaY*deltaY);
     double JIV_cc = -2.0*JIV_cx-2.0*JIV_cy-alpha;
+    double *JIV_fX = NULL, *JIV_fY = NULL;
+
+    if( calculate_fX_fY_arreys(xLeft, yBottom, n, m, deltaX, deltaY, &JIV_fX, &JIV_fY) != 0 )
+        printf("Not enough memory to calculate fY & fX values!\n");
 
     MPI_Request SRequests[4],RRequests[4];
     int RrequestsCount = 0,SrequestsCount = 0;
@@ -324,7 +338,8 @@ int main(int argc, char **argv)
                                      u_old, u,
                                      deltaX, deltaY,
                                      alpha, relax,
-                                     &JIV_cx, &JIV_cy, &JIV_cc);
+                                     &JIV_cx, &JIV_cy, &JIV_cc, 
+                                     JIV_fX, JIV_fY);
 
         MPI_Waitall(RrequestsCount, RRequests, MPI_STATUS_IGNORE);
 
@@ -333,7 +348,8 @@ int main(int argc, char **argv)
                                     u_old, u,
                                     deltaX, deltaY,
                                     alpha, relax,
-                                    &JIV_cx, &JIV_cy, &JIV_cc);
+                                    &JIV_cx, &JIV_cy, &JIV_cc,
+                                    JIV_fX, JIV_fY);
 
         //printf("\tError %g\n", error);
         iterationCount++;

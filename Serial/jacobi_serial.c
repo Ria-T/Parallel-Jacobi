@@ -38,17 +38,9 @@
 #include <time.h>
 #include <mpi.h>
 
-/*************************************************************
- * Performs one iteration of the Jacobi method and computes
- * the residual value.
- *
- * NOTE: u(0,*), u(maxXCount-1,*), u(*,0) and u(*,maxYCount-1)
- * are BOUNDARIES and therefore not part of the solution.
- *************************************************************/
-
 // fy, fx values are standard, but the program recallculates them at each itteration.
 // Having an arrey with all the values pre-calculated once saves a lot of computing time in the itteration
-int calculate_fX_fY_arreys(double xStart, double yStart, int n, int m,  double deltaX, double deltaY, double **fY, double **fX){
+int calculate_fX_fY_arreys(double xStart, double yStart, int n, int m,  double deltaX, double deltaY, double **fX, double **fY){
 	*fX = (double*)calloc(n, sizeof(double));
 	*fY = (double*)calloc(m, sizeof(double));
 	if( *fX == NULL || *fY == NULL) return -1;
@@ -61,6 +53,14 @@ int calculate_fX_fY_arreys(double xStart, double yStart, int n, int m,  double d
 	return 0;
 	
 }
+
+/*************************************************************
+ * Performs one iteration of the Jacobi method and computes
+ * the residual value.
+ *
+ * NOTE: u(0,*), u(maxXCount-1,*), u(*,0) and u(*,maxYCount-1)
+ * are BOUNDARIES and therefore not part of the solution.
+ *************************************************************/
 
 inline double one_jacobi_iteration(double xStart, double yStart,
                             int maxXCount, int maxYCount,
