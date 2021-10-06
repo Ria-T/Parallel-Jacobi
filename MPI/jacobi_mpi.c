@@ -213,7 +213,7 @@ int main(int argc, char **argv)
     get_local_table(&n, &m, &topology_dims, &coordinates, &rank, world_size,&cart_comm);
     n = coordinates[1][0]-coordinates[0][0]+1;
     m = coordinates[1][1]-coordinates[0][1]+1;
-    printf("%d:%dx%d\n",rank,n,m);
+    //printf("%d:%dx%d\n",rank,n,m);
     neighbors = get_neighbors(&cart_comm);
 
     allocCount = (n+2)*(m+2);
@@ -247,7 +247,7 @@ int main(int argc, char **argv)
     calculate_range(actual_xLeft,actual_xRight, &xLeft, &xRight, deltaX, coordinates[0][0], coordinates[1][0]);
     calculate_range(actual_yBottom,actual_yUp, &yBottom, &yUp, deltaY, coordinates[0][1], coordinates[0][0]);
 
-    printf("(%d:%d,%d) out of [-1,1] I get [%f,%f] & [%f,%f]\n",rank,card_cords[0],card_cords[1],xLeft,xRight,yBottom,yUp);
+    //printf("(%d:%d,%d) out of [-1,1] I get [%f,%f] & [%f,%f]\n",rank,card_cords[0],card_cords[1],xLeft,xRight,yBottom,yUp);
 
     free(card_cords);
 
@@ -355,12 +355,18 @@ int main(int argc, char **argv)
     }
 
     t2 = MPI_Wtime();
-    printf( "Iterations=%3d Elapsed MPI Wall time is %f\n", iterationCount, t2 - t1 ); 
 
     diff = clock() - start;
     int msec = diff * 1000 / CLOCKS_PER_SEC;
 
     free(u);
+
+    int *iterationCounts = NULL;
+    if( rank == 0 ){
+        iterationCounts = calloc( world_size, sizeof(int) );
+        printf( "Iterations=%3d Elapsed MPI Wall time is %f\n", iterationCount, t2 - t1 ); 
+    }
+    MPI_Gather(&iterationCount, 1, MPI_INT, iterationCounts, 1, MPI_INT, 0, cart_comm);
 
     double absoluteError = checkSolution(xLeft, yBottom,
                                         n+2, m+2,
@@ -372,6 +378,12 @@ int main(int argc, char **argv)
     MPI_Reduce(&absoluteError, &total_absoluteError, 1, MPI_DOUBLE, MPI_SUM, 0, cart_comm);
 
     if(rank == 0){
+        for(int i = 0; i<world_size; i++)
+            if(iterationCount != iterationCounts[i])
+                printf("Process %d specificaly did %d itterations\n",i,iterationCounts[i]);
+        
+        free(iterationCounts);
+
         printf("Time taken %d seconds %d milliseconds\n", msec/1000, msec%1000);
         printf("Residual %g\n",error);
         // u_old holds the solution after the most recent buffers swap

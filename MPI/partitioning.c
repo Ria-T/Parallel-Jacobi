@@ -86,17 +86,17 @@ void get_local_table(int *n, int *m, int** topology_dims, int ***coordinates, in
     (*coordinates)[1][1] = (*m/dims[1]) * (coords[1]+1) - 1;
     //if(dims[1] == coords[1]+1) {printf("happend for %d %d\n",dims[0],cart_rank); coordinates[1][1] = size[1]}
     //if(dims[0] == coords[0]+1 && coordinates[1][1]!=size[0]) {printf("STUPID A (%d)\n",cart_rank);}
-    if(dims[1] == coords[1]+1 && (*coordinates)[1][1]!=*m-1) { printf("STUPID B (%d)\n",cart_rank); }
+    //if(dims[1] == coords[1]+1 && (*coordinates)[1][1]!=*m-1) { printf("STUPID B (%d)\n",cart_rank); }
 
-    if(dims[0] == coords[0]+1 && (*coordinates)[0][1]!=*n-1) { printf("STUPID A (%d)\n",cart_rank); }
+    //if(dims[0] == coords[0]+1 && (*coordinates)[0][1]!=*n-1) { printf("STUPID A (%d)\n",cart_rank); }
 
     /*printf("I am %d: (%d,%d); originally %d\nWill have table [%d,%d] [%d,%d]\n   %2d\n%2d %2d %2d\n   %2d\n_\n"
     ,cart_rank, coords[0], coords[1], *rank
     ,coordinates[0][0],coordinates[0][1],coordinates[1][0],coordinates[1][1]
     ,neighbors[UP], neighbors[LEFT], cart_rank, neighbors[RIGHT], neighbors[DOWN]);*/
 
-    printf("(%d,%d) %2d -> [%3d,%3d]-[%3d,%3d]\n",coords[0],coords[1],cart_rank
-    ,(*coordinates)[0][0],(*coordinates)[0][1],(*coordinates)[1][0],(*coordinates)[1][1]);
+    /*printf("(%d,%d) %2d -> [%3d,%3d]-[%3d,%3d]\n",coords[0],coords[1],cart_rank
+    ,(*coordinates)[0][0],(*coordinates)[0][1],(*coordinates)[1][0],(*coordinates)[1][1]);*/
 
     size[0] = *n;
     size[1] = *m;

@@ -74,21 +74,19 @@ inline double one_jacobi_iteration(double xStart, double yStart,
     reduction (+: error)
     {
         #pragma omp for
-        for (y = 2; y < (maxYCount-2); y++)
-        {
+        for (y = 2; y < (maxYCount-2); y++){
             fY = yStart + (y-1)*deltaY;
-            for (x = 2; x < (maxXCount-2); x++)
-            {
+            for (x = 2; x < (maxXCount-2); x++){
                 fX = xStart + (x-1)*deltaX;
                 f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
 
-                #pragma omp critical
+                //#pragma omp critical
                 updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
                                 (SRC(x,y-1) + SRC(x,y+1))*(*cy) +
                                 SRC(x,y)*(*cc) - f
                             )/(*cc);
 
-                #pragma omp critical
+                //#pragma omp critical
                 DST(x,y) = SRC(x,y) - omega*updateVal;
 
                 //#pragma omp atomic
@@ -119,32 +117,52 @@ inline double one_halo_jacobi_iteration(double xStart, double yStart,
     double cy = 1.0/(deltaY*deltaY);
     double cc = -2.0*cx-2.0*cy-alpha;*/
 
-    for(y=1; y<maxYCount-1; y+=maxYCount-3){
-        fY = yStart + (y-1)*deltaY;
-        for(x=1; x<maxXCount-1; x++){
-            fX = xStart + (x-1)*deltaX;
-            f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
-            updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
-                			(SRC(x,y-1) + SRC(x,y+1))*(*cy) +
-                			SRC(x,y)*(*cc) - f
-						)/(*cc);
-            DST(x,y) = SRC(x,y) - omega*updateVal;
-            error += updateVal*updateVal;
-        }
-    }
+    #pragma omp parallel default(none) \
+    shared(xStart, yStart, deltaX, deltaY, maxXCount, maxYCount, src, dst, omega, alpha, cx, cy, cc) \
+    private(fX, fY, x, y, f, updateVal) \
+    reduction (+: error)
+    {
 
-    for(y=2; y<maxYCount-2; y++){
-        fY = yStart + (y-1)*deltaY;
-        for(x=1; x<maxXCount-1; x+=maxXCount-3){
-            fX = xStart + (x-1)*deltaX;
-            f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
-            updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
-                			(SRC(x,y-1) + SRC(x,y+1))*(*cy) +
-                			SRC(x,y)*(*cc) - f
-						)/(*cc);
-            DST(x,y) = SRC(x,y) - omega*updateVal;
-            error += updateVal*updateVal;
+        #pragma omp for
+        for(y=1; y<maxYCount-1; y+=maxYCount-3){
+            fY = yStart + (y-1)*deltaY;
+            for(x=1; x<maxXCount-1; x++){
+                fX = xStart + (x-1)*deltaX;
+                f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
+
+                //#pragma omp critical
+                updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
+                                (SRC(x,y-1) + SRC(x,y+1))*(*cy) +
+                                SRC(x,y)*(*cc) - f
+                            )/(*cc);
+
+                //#pragma omp critical
+                DST(x,y) = SRC(x,y) - omega*updateVal;
+
+                error += updateVal*updateVal;
+            }
         }
+
+        #pragma omp for
+        for(y=2; y<maxYCount-2; y++){
+            fY = yStart + (y-1)*deltaY;
+            for(x=1; x<maxXCount-1; x+=maxXCount-3){
+                fX = xStart + (x-1)*deltaX;
+                f = -alpha*(1.0-fX*fX)*(1.0-fY*fY) - 2.0*(1.0-fX*fX) - 2.0*(1.0-fY*fY);
+
+                //#pragma omp critical
+                updateVal = (	(SRC(x-1,y) + SRC(x+1,y))*(*cx) +
+                                (SRC(x,y-1) + SRC(x,y+1))*(*cy) +
+                                SRC(x,y)*(*cc) - f
+                            )/(*cc);
+
+                //#pragma omp critical
+                DST(x,y) = SRC(x,y) - omega*updateVal;
+
+                error += updateVal*updateVal;
+            }
+        }
+
     }
 
     return error;//sqrt(error)/((maxXCount-2)*(maxYCount-2));
