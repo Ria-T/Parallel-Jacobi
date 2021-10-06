@@ -376,6 +376,7 @@ int main(int argc, char **argv)
     int msec = diff * 1000 / CLOCKS_PER_SEC;
 
     free(u);
+    free(JIV_fX); free(JIV_fY);
 
     int *iterationCounts = NULL;
     if( rank == 0 ){
