@@ -12,7 +12,7 @@ void calculate_range(double start, double end, double *a, double *b, double delt
 
 void calculate_topology(int processes, int (*dims)[2]){
     double t;
-    if( processes > 2 ){
+    if( processes > 2 && processes != 8 && processes != 18 && processes != 32  && processes != 80){
         t = sqrt(processes);
         if ( t == (int)t ){
             (*dims)[0] = t;
@@ -24,6 +24,18 @@ void calculate_topology(int processes, int (*dims)[2]){
     }else if( processes == 2){
         (*dims)[0] = 1;
         (*dims)[1] = processes;
+    }else if( processes == 8){
+        (*dims)[0] = 2;
+        (*dims)[1] = 4;
+    }else if( processes == 18){
+        (*dims)[0] = 3;
+        (*dims)[1] = 6;
+    }else if( processes == 32){
+        (*dims)[0] = 4;
+        (*dims)[1] = 8;
+    }else if( processes == 80){
+        (*dims)[0] = 8;
+        (*dims)[1] = 10;
     }else{
         (*dims)[0] = processes;
         (*dims)[1] = (*dims)[0];

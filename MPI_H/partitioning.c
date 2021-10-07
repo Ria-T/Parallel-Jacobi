@@ -12,7 +12,7 @@ void calculate_range(double start, double end, double *a, double *b, double delt
 
 void calculate_topology(int processes, int (*dims)[2]){
     double t;
-    if( processes > 2 ){
+    if( processes > 2 && processes != 8 && processes != 18 && processes != 32  && processes != 80){
         t = sqrt(processes);
         if ( t == (int)t ){
             (*dims)[0] = t;
@@ -24,6 +24,18 @@ void calculate_topology(int processes, int (*dims)[2]){
     }else if( processes == 2){
         (*dims)[0] = 1;
         (*dims)[1] = processes;
+    }else if( processes == 8){
+        (*dims)[0] = 2;
+        (*dims)[1] = 4;
+    }else if( processes == 18){
+        (*dims)[0] = 3;
+        (*dims)[1] = 6;
+    }else if( processes == 32){
+        (*dims)[0] = 4;
+        (*dims)[1] = 8;
+    }else if( processes == 80){
+        (*dims)[0] = 8;
+        (*dims)[1] = 10;
     }else{
         (*dims)[0] = processes;
         (*dims)[1] = (*dims)[0];
@@ -86,17 +98,17 @@ void get_local_table(int *n, int *m, int** topology_dims, int ***coordinates, in
     (*coordinates)[1][1] = (*m/dims[1]) * (coords[1]+1) - 1;
     //if(dims[1] == coords[1]+1) {printf("happend for %d %d\n",dims[0],cart_rank); coordinates[1][1] = size[1]}
     //if(dims[0] == coords[0]+1 && coordinates[1][1]!=size[0]) {printf("STUPID A (%d)\n",cart_rank);}
-    if(dims[1] == coords[1]+1 && (*coordinates)[1][1]!=*m-1) { printf("STUPID B (%d)\n",cart_rank); }
+    //if(dims[1] == coords[1]+1 && (*coordinates)[1][1]!=*m-1) { printf("STUPID B (%d)\n",cart_rank); }
 
-    if(dims[0] == coords[0]+1 && (*coordinates)[0][1]!=*n-1) { printf("STUPID A (%d)\n",cart_rank); }
+    //if(dims[0] == coords[0]+1 && (*coordinates)[0][1]!=*n-1) { printf("STUPID A (%d)\n",cart_rank); }
 
     /*printf("I am %d: (%d,%d); originally %d\nWill have table [%d,%d] [%d,%d]\n   %2d\n%2d %2d %2d\n   %2d\n_\n"
     ,cart_rank, coords[0], coords[1], *rank
     ,coordinates[0][0],coordinates[0][1],coordinates[1][0],coordinates[1][1]
     ,neighbors[UP], neighbors[LEFT], cart_rank, neighbors[RIGHT], neighbors[DOWN]);*/
 
-    printf("(%d,%d) %2d -> [%3d,%3d]-[%3d,%3d]\n",coords[0],coords[1],cart_rank
-    ,(*coordinates)[0][0],(*coordinates)[0][1],(*coordinates)[1][0],(*coordinates)[1][1]);
+    /*printf("(%d,%d) %2d -> [%3d,%3d]-[%3d,%3d]\n",coords[0],coords[1],cart_rank
+    ,(*coordinates)[0][0],(*coordinates)[0][1],(*coordinates)[1][0],(*coordinates)[1][1]);*/
 
     size[0] = *n;
     size[1] = *m;
