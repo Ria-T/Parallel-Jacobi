@@ -39,7 +39,6 @@
 #include <mpi.h>
 
 #include "partitioning.h"
-#include "helpers.h"
 
 // fy, fx values are standard for all itterations. Though they are recallculated at each itteration/jacobi_itteration calling.
 // Having an arrey with all the values pre-calculated once saves a lot of computing time while itterating/executing jacobi_itteration.

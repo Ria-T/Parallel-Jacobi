@@ -38,7 +38,7 @@
 #include <time.h>
 #include <mpi.h>
 
-// fy, fx values are standard, but the program recallculates them at each itteration.
+// fy, fx values are standard, but the program recallculates them at each itteration/jacobi_itteration calling.
 // Having an arrey with all the values pre-calculated once saves a lot of computing time in the itteration
 int calculate_fX_fY_arreys(double xStart, double yStart, int n, int m,  double deltaX, double deltaY, double **fX, double **fY){
 	*fX = (double*)calloc(n, sizeof(double));

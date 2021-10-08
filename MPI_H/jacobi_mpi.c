@@ -40,7 +40,6 @@
 #include <omp.h>
 
 #include "partitioning.h"
-#include "helpers.h"
 
 // fy, fx values are standard for all itterations. Though they are recallculated at each itteration/jacobi_itteration calling.
 // Having an arrey with all the values pre-calculated once saves a lot of computing time while itterating/executing jacobi_itteration.
@@ -302,8 +301,8 @@ int main(int argc, char **argv)
     double deltaY = (actual_yUp-actual_yBottom)/(actual_m-1);//(m-1);
 
     // Calculating the local xLeft,xRight,yBottom,yUp values for the size of the local table
-    calculate_range(actual_xLeft,actual_xRight, &xLeft, &xRight, deltaX, coordinates[0][0], coordinates[1][0]);
-    calculate_range(actual_yBottom,actual_yUp, &yBottom, &yUp, deltaY, coordinates[0][1], coordinates[0][0]);
+    calculate_xy_range(actual_xLeft,actual_xRight, &xLeft, &xRight, deltaX, coordinates[0][0], coordinates[1][0]);
+    calculate_xy_range(actual_yBottom,actual_yUp, &yBottom, &yUp, deltaY, coordinates[0][1], coordinates[0][0]);
 
     //printf("(%d:%d,%d) out of [-1,1] I get [%f,%f] & [%f,%f]\n",rank,card_cords[0],card_cords[1],xLeft,xRight,yBottom,yUp);
 

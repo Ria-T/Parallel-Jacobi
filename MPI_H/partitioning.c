@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <mpi.h>
-#include "helpers.h"
 
 
 void calculate_xy_range(double start, double end, double *a, double *b, double delta, int start_coordinates, int end_coordinates){
@@ -59,7 +58,7 @@ int *get_neighbors(MPI_Comm *cart_comm){
 }
 
 void get_local_table(int *n, int *m, int** topology_dims, int ***coordinates, int *rank, int world_size, MPI_Comm *cart_comm){
-    int dims[2], periods[2] = {0, 0}, size[2], coords[2], bold[2][2];
+    int dims[2], periods[2] = {0, 0}, coords[2];
 
     if(*rank == 0){
         calculate_topology(world_size, &dims);
@@ -91,7 +90,7 @@ void get_local_table(int *n, int *m, int** topology_dims, int ***coordinates, in
 
     (*coordinates)[1][0] = (*n/dims[0]) * (coords[0]+1) - 1;
     (*coordinates)[1][1] = (*m/dims[1]) * (coords[1]+1) - 1;
-    if(dims[0] == coords[0]+1 && (*coordinates)[1][1]!=size[0]){
+    if(dims[1] == coords[1]+1 && (*coordinates)[1][1]!=*m-1){
         printf("Warning! procces: %d has a different local/'small' table size. \
         This is usually cased by a non standard size of tables and number of procceses, \
         and might result in a small deviation in the result. \
@@ -112,14 +111,6 @@ void get_local_table(int *n, int *m, int** topology_dims, int ***coordinates, in
 
     printf("(%d,%d) %2d -> [%3d,%3d]-[%3d,%3d]\n",coords[0],coords[1],cart_rank
     ,(*coordinates)[0][0],(*coordinates)[0][1],(*coordinates)[1][0],(*coordinates)[1][1]);*/
-
-    size[0] = *n;
-    size[1] = *m;
-    bold[0][0]=(*coordinates)[0][0];
-    bold[0][1]=(*coordinates)[0][1];
-    bold[1][0]=(*coordinates)[1][0];
-    bold[1][1]=(*coordinates)[1][1];
-    draw_table(bold, size, cart_rank);
 
     *rank = cart_rank;
 }
