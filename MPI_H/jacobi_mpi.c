@@ -68,10 +68,8 @@ int calculate_fX_fY_arreys(double xStart, double yStart, int n, int m, double de
  * NOTE FOR EXAMINATOR: In the mpi program there are two jacobi_iteration functions, 
  * the first caclulates the "white" part of the table, and the second (one_halo_jacobi_iteration) the halos.
  *************************************************************/
-inline double one_jacobi_iteration(double xStart, double yStart,
-                            int maxXCount, int maxYCount,
+inline double one_jacobi_iteration(int maxXCount, int maxYCount,
                             double *src, double *dst,
-                            double deltaX, double deltaY,
                             double alpha, double omega,
                             double const * const cx, double const * const cy, double const * const cc,
                             double *fX, double *fY)
@@ -89,11 +87,11 @@ inline double one_jacobi_iteration(double xStart, double yStart,
     double cc = -2.0*cx-2.0*cy-alpha;*/
 
     #pragma omp parallel default(none) \
-    shared(xStart, yStart, deltaX, deltaY, maxXCount, maxYCount, src, dst, omega, alpha, cx, cy, cc, fX, fY) \
+    shared(maxXCount, maxYCount, src, dst, omega, alpha, cx, cy, cc, fX, fY) \
     private(x, y, f, updateVal) \
     reduction (+: error)
     {
-        #pragma omp for collapse(2)
+        #pragma omp for collapse(2) schedule(static)
         for (y = 2; y < (maxYCount-2); y++){
             for (x = 2; x < (maxXCount-2); x++){
                 f = -alpha*(1.0-fX[x-1]*fX[x-1])*(1.0-fY[y-1]*fY[y-1]) - 2.0*(1.0-fX[x-1]*fX[x-1]) - 2.0*(1.0-fY[y-1]*fY[y-1]);
@@ -119,10 +117,8 @@ inline double one_jacobi_iteration(double xStart, double yStart,
 }
 
 // This function is the same as the above but, as mentioned above, it calculates the halo values of the local table
-inline double one_halo_jacobi_iteration(double xStart, double yStart,
-                            int maxXCount, int maxYCount,
+inline double one_halo_jacobi_iteration(int maxXCount, int maxYCount,
                             double *src, double *dst,
-                            double deltaX, double deltaY,
                             double alpha, double omega,
                             double const * const cx, double const * const cy, double const * const cc,
                             double *fX, double *fY)
@@ -142,12 +138,12 @@ inline double one_halo_jacobi_iteration(double xStart, double yStart,
     // There are two for loops, one for rows, and one for columns
 
     #pragma omp parallel default(none) \
-    shared(xStart, yStart, deltaX, deltaY, maxXCount, maxYCount, src, dst, omega, alpha, cx, cy, cc, fX, fY) \
+    shared(maxXCount, maxYCount, src, dst, omega, alpha, cx, cy, cc, fX, fY) \
     private(x, y, f, updateVal) \
     reduction (+: error)
     {
 
-        #pragma omp for collapse(2)
+        #pragma omp for collapse(2) schedule(static)
         for(y=1; y<maxYCount-1; y+=maxYCount-3){
             for(x=1; x<maxXCount-1; x++){
                 f = -alpha*(1.0-fX[x-1]*fX[x-1])*(1.0-fY[y-1]*fY[y-1]) - 2.0*(1.0-fX[x-1]*fX[x-1]) - 2.0*(1.0-fY[y-1]*fY[y-1]);
@@ -165,7 +161,7 @@ inline double one_halo_jacobi_iteration(double xStart, double yStart,
             }
         }
 
-        #pragma omp for collapse(2)
+        #pragma omp for collapse(2) schedule(static)
         for(y=2; y<maxYCount-2; y++){
             for(x=1; x<maxXCount-1; x+=maxXCount-3){
                 f = -alpha*(1.0-fX[x-1]*fX[x-1])*(1.0-fY[y-1]*fY[y-1]) - 2.0*(1.0-fX[x-1]*fX[x-1]) - 2.0*(1.0-fY[y-1]*fY[y-1]);
@@ -387,10 +383,8 @@ int main(int argc, char **argv)
         }
 
         // First calling one_jacobi_iteration, to caluculate only the white part of the table
-        error = one_jacobi_iteration(xLeft, yBottom,
-                                     n+2, m+2,
+        error = one_jacobi_iteration(n+2, m+2,
                                      u_old, u,
-                                     deltaX, deltaY,
                                      alpha, relax,
                                      &JIV_cx, &JIV_cy, &JIV_cc, 
                                      JIV_fX, JIV_fY);
@@ -399,10 +393,8 @@ int main(int argc, char **argv)
         MPI_Waitall(RrequestsCount, RRequests, MPI_STATUS_IGNORE);
 
         // And then calculating the values for the halos with the according function
-        error += one_halo_jacobi_iteration(xLeft, yBottom,
-                                    n+2, m+2,
+        error += one_halo_jacobi_iteration(n+2, m+2,
                                     u_old, u,
-                                    deltaX, deltaY,
                                     alpha, relax,
                                     &JIV_cx, &JIV_cy, &JIV_cc, 
                                     JIV_fX, JIV_fY);

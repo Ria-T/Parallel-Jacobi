@@ -11,7 +11,7 @@ void calculate_xy_range(double start, double end, double *a, double *b, double d
 
 void calculate_topology(int processes, int (*dims)[2]){
     double t;
-    if( processes > 2 && processes != 8 && processes != 18 && processes != 32  && processes != 80){
+    if( processes > 2 && processes != 8 && processes != 18 && processes != 32  && processes != 40 && processes != 80){
         t = sqrt(processes);
         if ( t == (int)t ){
             (*dims)[0] = t;
@@ -33,6 +33,9 @@ void calculate_topology(int processes, int (*dims)[2]){
         (*dims)[1] = 6;
     }else if( processes == 32){
         (*dims)[0] = 4;
+        (*dims)[1] = 8;
+    }else if( processes == 40){
+        (*dims)[0] = 5;
         (*dims)[1] = 8;
     }else if( processes == 80){
         (*dims)[0] = 8;

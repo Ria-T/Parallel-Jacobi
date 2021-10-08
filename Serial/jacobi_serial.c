@@ -62,10 +62,8 @@ int calculate_fX_fY_arreys(double xStart, double yStart, int n, int m,  double d
  * are BOUNDARIES and therefore not part of the solution.
  *************************************************************/
 
-inline double one_jacobi_iteration(double xStart, double yStart,
-                            int maxXCount, int maxYCount,
+inline double one_jacobi_iteration(int maxXCount, int maxYCount,
                             double *src, double *dst,
-                            double deltaX, double deltaY,
                             double alpha, double omega,
                             double const * const cx, double const * const cy, double const * const cc,
 							double *fX, double *fY)
@@ -199,10 +197,8 @@ int main(int argc, char **argv)
     {    	
         //printf("Iteration %i", iterationCount);
 
-        error = one_jacobi_iteration(xLeft, yBottom,
-                                     n+2, m+2,
+        error = one_jacobi_iteration(n+2, m+2,
                                      u_old, u,
-                                     deltaX, deltaY,
                                      alpha, relax,
                                      &JIV_cx, &JIV_cy, &JIV_cc,
 									 fX,fY);
