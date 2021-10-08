@@ -126,6 +126,8 @@ inline double one_halo_jacobi_iteration(double xStart, double yStart,
     double cy = 1.0/(deltaY*deltaY);
     double cc = -2.0*cx-2.0*cy-alpha;*/
 
+    // There are two for loops, one for rows, and one for columns
+
     for(y=1; y<maxYCount-1; y+=maxYCount-3){
         for(x=1; x<maxXCount-1; x++){
             f = -alpha*(1.0-fX[x-1]*fX[x-1])*(1.0-fY[y-1]*fY[y-1]) - 2.0*(1.0-fX[x-1]*fX[x-1]) - 2.0*(1.0-fY[y-1]*fY[y-1]);
@@ -244,7 +246,7 @@ int main(int argc, char **argv)
     u = 	(double*)calloc(allocCount, sizeof(double)); //reverse order
     u_old = (double*)calloc(allocCount, sizeof(double));
     
-//    printf("allocCount=%d u=%p u_old=%p\n", allocCount, u, u_old);
+    //printf("allocCount=%d u=%p u_old=%p\n", allocCount, u, u_old);
     
     if (u == NULL || u_old == NULL)
     {
@@ -279,13 +281,13 @@ int main(int argc, char **argv)
     error = HUGE_VAL;
     clock_t start = clock(), diff;
 
-    // Jacobi iteration Coefficient variables (values are calculated once here -> faster execution of inline function)
+    // Jacobi iteration Coefficient variables (values are calculated once here -> faster execution of inline function)...
     double JIV_cx = 1.0/(deltaX*deltaX);
     double JIV_cy = 1.0/(deltaY*deltaY);
     double JIV_cc = -2.0*JIV_cx-2.0*JIV_cy-alpha;
     double *JIV_fX = NULL, *JIV_fY = NULL;
 
-    // The same goes for the jacobi iteration fX, fY variables
+    // ...The same goes for the jacobi iteration fX, fY variables
     if( calculate_fX_fY_arreys(xLeft, yBottom, n, m, deltaX, deltaY, &JIV_fX, &JIV_fY) != 0 )
         printf("Not enough memory to calculate fY & fX values!\n");
 
