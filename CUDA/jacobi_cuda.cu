@@ -63,7 +63,7 @@ int calculate_fX_fY_arrays(double xStart, double yStart, int n, int m,  double d
  * are BOUNDARIES and therefore not part of the solution.
  *************************************************************/
 
-__global__ inline void one_jacobi_iteration(double xStart, double yStart,
+__global__ void one_jacobi_iteration(double xStart, double yStart,
                             int maxXCount, int maxYCount,
                             double *src, double *dst,
                             double deltaX, double deltaY,
@@ -134,7 +134,7 @@ int main(int argc, char **argv)
     int n, m, mits;
     double alpha, tol, relax;
     double maxAcceptableError;
-    double error, d_error;
+    double error, *d_error;
     double *u, *u_old, *tmp;
     double *d_u, *d_u_old;
     int allocCount;
@@ -193,7 +193,7 @@ int main(int argc, char **argv)
     size_t arraySizeInBytes = allocCount * sizeof(double);
     cudaMalloc(&d_u, arraySizeInBytes); 
     cudaMalloc(&d_u_old, arraySizeInBytes); 
-    cudaMalloc(&d_error, sizeof(d_error));
+    cudaMalloc(&d_error, sizeof(double));
 
     cudaMemcpy(d_u, u, arraySizeInBytes, cudaMemcpyHostToDevice); 
     cudaMemcpy(d_u_old, u_old, arraySizeInBytes, cudaMemcpyHostToDevice); 
@@ -224,7 +224,7 @@ int main(int argc, char **argv)
     // Copy results back to host.
     // d_u_old holds the solution after the most recent buffers swap.
     cudaMemcpy(u_old, d_u_old, arraySizeInBytes, cudaMemcpyDeviceToHost);
-    cudaMemcpy(&error, d_error, sizeof(error), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&error, d_error, sizeof(double), cudaMemcpyDeviceToHost);
 
     diff = clock() - start;
     int msec = diff * 1000 / CLOCKS_PER_SEC;
